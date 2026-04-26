@@ -1,9 +1,17 @@
 name = "Spin1LongRangeOrder"
 uuid = "de5c60e0-ddbf-472c-b3cb-68fd16c59d8a"
-authors = ["A.S.Shankar"]
 version = "1.0.0-DEV"
+authors = ["A.S.Shankar"]
+
+[deps]
+ITensorMPS = "0d1a4710-d33b-49a5-8f18-73bdf49b47e2"
+ITensors = "9136182c-28ba-11e9-034c-db9fb085ebd5"
+Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 
 [compat]
+ITensorMPS = "0.3.45"
+ITensors = "0.9.26"
+Plots = "1.41.6"
 julia = "1.10.10"
 
 [extras]
