@@ -131,3 +131,40 @@ function mps_tensor_equal(psi1::MPS, psi2::MPS; atol=1e-12)
 
     return true
 end
+
+"""
+    replace_siteinds(psi::MPS, new_sites::Vector)
+
+Replace the site indices of a loaded MPS with new site indices.
+This is necessary when resuming DMRG from a saved checkpoint to ensure
+the loaded MPS uses the same site index objects as the new Hamiltonian.
+
+Usage:
+    sites = siteinds("S=1", N; conserve_sz=false)
+    H = build_hamiltonian(sites, ...)
+    psi_load = load_simulation("checkpoint.h5")
+    psi_load = replace_siteinds(psi_load, sites)
+    energy, psi = dmrg(H, psi_load; ...)
+"""
+function replace_siteinds(psi::MPS, new_sites::Vector)
+    psi_new = copy(psi)
+    
+    for j in 1:length(psi_new)
+        old_inds = inds(psi_new[j])
+        
+        # Find and replace the site index
+        new_inds = map(old_inds) do ind
+            if hasplev(ind) && plev(ind) == 0  # site index (no prime level)
+                return new_sites[j]
+            else
+                return ind
+            end
+        end
+        
+        psi_new[j] = ITensor(psi_new[j], new_inds)
+    end
+    
+    return psi_new
+end
+
+
