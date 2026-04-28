@@ -9,14 +9,14 @@ gr()
 ##
 let
   # println(BLAS.get_config())  
-  N = 100
+  N = 200
   sites = siteinds("S=1", N; conserve_sz=false)
   h = 0.0
   J = -1.0
   g = 0.5
 
-  H_fm = build_fm_hamiltonian(sites, J)
-  H_prelim = build_prelim_hamiltonian(sites, J)
+#   H_fm = build_fm_hamiltonian(sites, J)
+#   H_prelim = build_prelim_hamiltonian(sites, J)
   H_pert = build_pert_hamiltonian(sites, J, g)
 
 #   nsweeps_p = 3
@@ -30,10 +30,10 @@ let
 #   psi0 = random_mps(sites; linkdims=2)
 #   @show typeof(psi0)
     instate = ["X+" for n in 1:N]
-    psi0 = random_mps(sites, instate; linkdims=10)
-    psi_fm = random_mps(sites, instate; linkdims=10)
+    psi_0 = random_mps(sites, instate; linkdims=10)
+    # psi_fm = random_mps(sites, instate; linkdims=10)
 
-#   energy, psi_p = dmrg(H_prelim, psi0; nsweeps=nsweeps_p, maxdim=maxdim_p,
+#   energy, psi_p = dmrg(H_prelim, psi_0; nsweeps=nsweeps_p, maxdim=maxdim_p,
 #     cutoff=cutoff_p, mindim=mindim_p,
 #     eigsolve_krylovdim=eigsolve_krylovdim_p, noise=noise_p)
 
@@ -48,23 +48,20 @@ let
 
 
   ### Load the recently stopped state and continue with the perturbed Hamiltonian
-  psi_load = load_simulation("sampleMPS.h5")
-  psi_load = replace_siteinds(psi_load, sites)  # Replace siteinds to match the new sites
+#   psi_load = load_simulation("sampleMPS.h5")
+#   psi_load = replace_siteinds(psi_load, sites)  # Replace siteinds to match the new sites
 
-  @show typeof(psi_load)
-
-  @show typeof(psi_fm)
   
-  nsweeps = 30
-#   maxdim = [100, 150, 200, 200 ,200 ,200,200, 200, 200, 200, 220]
-  maxdim = [200, 220, 250]
+  nsweeps = 50
+  maxdim = [100, 150, 200, 200 ,200 ,200,200, 200, 200, 200, 220]
+#   maxdim = [200, 220, 250]
   mindim = [10, 10]
   eigsolve_krylovdim = 3
   cutoff = [1E-12]
   noise = [0]
 # @profview dmrg(H_pert, psi_fm; nsweeps, maxdim, cutoff, mindim=mindim,
 #     eigsolve_krylovdim=eigsolve_krylovdim)
-  energy, psi = dmrg(H_pert, psi_load; nsweeps, maxdim, cutoff, mindim=mindim,
+  energy, psi = dmrg(H_pert, psi_0; nsweeps, maxdim, cutoff, mindim=mindim,
     eigsolve_krylovdim=eigsolve_krylovdim)
 
   # writeToFile("mps_test")
