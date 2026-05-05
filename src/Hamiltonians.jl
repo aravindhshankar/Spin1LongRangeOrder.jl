@@ -53,4 +53,17 @@ function build_pert_hamiltonian(sites::Vector, J::Real, g::Real)
     return MPO(os, sites)
 end
 
+function build_g1g2_hamiltonian(sites::Vector, J::Real, g1::Real, g2::Real)
+    N = length(sites)
+    os = OpSum()
+    for j = 1:N-1
+        os += J, "Sz", j, "Sz", j + 1
+        os += 0.5 * J, "S+", j, "S-", j + 1
+        os += 0.5 * J, "S-", j, "S+", j + 1
+        os += g1, "Sz2", j
+        os += g2, "Sz2", j, "Sz2", j + 1
+    end
+    return MPO(os, sites)
 end
+
+end # module Hamiltonians

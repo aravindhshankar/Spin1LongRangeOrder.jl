@@ -63,17 +63,20 @@ function LoadmpsPlotCorr(filename::String, ::Val{:single}; savefile::String="", 
   zzcorr = correlation_matrix(psi, "Sz", "Sz")
   xxcorr = correlation_matrix(psi, "Sx", "Sx")
   yycorr = correlation_matrix(psi, "Sy", "Sy")
+  pmcorr = correlation_matrix(psi, "S+", "S-")
 
   xplotvals = range(start=1, length=N, step=1)
   line1 = abs.(zzcorr[Int64(N // 2), :])
   line2 = abs.(xxcorr[Int64(N // 2), :])
   line3 = abs.(yycorr[Int64(N // 2), :])
+  line4 = abs.(pmcorr[Int64(N // 2), :])
 
   # Single panel figure with log-linear axes
   p = plot(xplotvals, line1, label="|ZZ|", xlabel="site", ylabel="Correlation", 
            yscale=:log10, legend=:bottom, ms=5, lw=2, size=(800,500))
   plot!(xplotvals, line2, label="|XX|",  ms=5, lw=2)
   plot!(xplotvals, line3, label="|YY|", ms=5, lw=2)
+  plot!(xplotvals, line4, label="|PM|", ms=5, lw=2)
   title!(p, titlestring)
 
   if savefile != "" 

@@ -3,3 +3,6 @@
 *.h5
 *.swp
 *.tmp
+*.o
+*.env
+.vscode/

@@ -2,7 +2,6 @@ using MKL
 using Spin1LongRangeOrder
 using ITensors, ITensorMPS
 using Spin1LongRangeOrder.Hamiltonians
-using Ioh5
 using HDF5
 using Plots
 gr()
@@ -13,7 +12,7 @@ let
   sites = siteinds("S=1", N; conserve_sz=false)
   h = 0.0
   J = -1.0
-  g = 0.5
+  g = 1.5 #g>0 orders in X-Y plane, g=0 is the critical point, g<0 orders in Z direction
 
 #   H_fm = build_fm_hamiltonian(sites, J)
 #   H_prelim = build_prelim_hamiltonian(sites, J)
@@ -28,8 +27,8 @@ let
 #   noise_p = [1e-6]
 
 #   psi0 = random_mps(sites; linkdims=2)
-#   @show typeof(psi0)
     instate = ["X+" for n in 1:N]
+    # instate = ["Up" for n in 1:N]
     psi_0 = random_mps(sites, instate; linkdims=10)
     # psi_fm = random_mps(sites, instate; linkdims=10)
 
@@ -53,10 +52,10 @@ let
 
   
   nsweeps = 50
-  maxdim = [100, 150, 200, 200 ,200 ,200,200, 200, 200, 200, 220]
-#   maxdim = [200, 220, 250]
+#   maxdim = [100, 150, 200, 200 ,200 ,200,200, 200, 200, 200, 220, 220, 220, 250, 250, 250, 250, 250, 300, 300, 300, 350, 350, 350, 400, 400] # gradually increase states kept
+  maxdim = [100, 200, 220, 250, 300, 350]
   mindim = [10, 10]
-  eigsolve_krylovdim = 3
+  eigsolve_krylovdim = 5
   cutoff = [1E-12]
   noise = [0]
 # @profview dmrg(H_pert, psi_fm; nsweeps, maxdim, cutoff, mindim=mindim,
