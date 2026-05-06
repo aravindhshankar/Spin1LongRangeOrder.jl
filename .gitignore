@@ -5,4 +5,8 @@
 *.tmp
 *.o
 *.env
+*.pdf
+*.out
+*.err
 .vscode/
+/data/*
