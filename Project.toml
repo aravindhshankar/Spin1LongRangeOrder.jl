@@ -15,7 +15,7 @@ Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 [compat]
 Dates = "1.11.0"
 HDF5 = "0.17.3"
-ITensorMPS = "0.3.45"
+ITensorMPS = "0.3.45, 0.4"
 ITensors = "0.9.26"
 MKL = "0.9.1"
 Plots = "1.41.6"
