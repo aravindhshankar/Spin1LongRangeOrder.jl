@@ -59,8 +59,8 @@ model_params = {
     "L": 2,                 # unit cell size for iMPS
     "S": 1,
     "J": 1.0,
-    "g1": -0.5,
-    "g2": -0.35,
+    "g1": 0.5,
+    "g2": -0.2,
     "bc_MPS": "infinite",  # infinite boundary conditions
     "conserve": None,
 }
@@ -71,12 +71,13 @@ model = Spin1Chain(model_params)
 # Initial iMPS product state
 # -------------------------------------------------------------------
 
-product_state = ["up", "up"]  # repeating unit cell
+product_state = ["up", "down"]  # repeating unit cell
 
 psi = MPS.from_product_state(
     model.lat.mps_sites(),
     product_state,
-    bc="infinite"
+    bc="infinite",
+    unit_cell_width=len(product_state)
 )
 
 # -------------------------------------------------------------------
@@ -103,6 +104,7 @@ info = dmrg.run(psi, model, dmrg_params)
 
 print("\n=== iDMRG finished ===")
 print("Ground state energy density =", info["E"])
+print(info.keys())
 
 # -------------------------------------------------------------------
 # Example observables
