@@ -1,4 +1,7 @@
 import numpy as np
+import logging
+logging.basicConfig(level=logging.INFO)
+import matplotlib.pyplot as plt
 
 from tenpy.models.model import CouplingMPOModel
 from tenpy.networks.site import SpinSite
@@ -60,7 +63,7 @@ model_params = {
     "S": 1,
     "J": 1.0,
     "g1": 0.5,
-    "g2": -0.2,
+    "g2": -0.3495,
     "bc_MPS": "infinite",  # infinite boundary conditions
     "conserve": None,
 }
@@ -87,12 +90,12 @@ psi = MPS.from_product_state(
 dmrg_params = {
     "mixer": True,
     "trunc_params": {
-        "chi_max": 100,
+        "chi_max": 200,
         "svd_min": 1e-10,
     },
     "max_E_err": 1e-8,
     "max_S_err": 1e-6,
-    "max_sweeps": 30,
+    "max_sweeps": 40,
     "verbose": 1,
 }
 
@@ -100,6 +103,7 @@ dmrg_params = {
 # Run infinite DMRG
 # -------------------------------------------------------------------
 
+print("g2 = ", model_params['g2'])
 info = dmrg.run(psi, model, dmrg_params)
 
 print("\n=== iDMRG finished ===")
@@ -112,6 +116,8 @@ print(info.keys())
 
 Sz = psi.expectation_value("Sz")
 Sz2 = psi.expectation_value("Sz Sz")
+Sx = psi.expectation_value("Sx")
+Sy = psi.expectation_value("Sy")
 
 print("\n<Sz> per site:")
 print(Sz)
@@ -119,8 +125,25 @@ print(Sz)
 print("\n<(Sz)^2> per site:")
 print(Sz2)
 
-# nearest-neighbor correlations
-corr = psi.correlation_function("Sz", "Sz", [0], [1])
+print("\n<Sx> per site:")
+print(Sx)
 
-print("\n<Sz_i Sz_{i+1}>:")
-print(corr)
+print("\n<Sy> per site:")
+print(Sy)
+
+# nearest-neighbor correlations
+corr_range = np.arange(1,100)
+corrz = psi.correlation_function("Sz", "Sz", [0], corr_range)
+corrx = psi.correlation_function("Sx", "Sx", [0], corr_range)
+corry = psi.correlation_function("Sy", "Sy", [0], corr_range)
+
+# print("\n<Sz_i Sz_{i+1}>:")
+fig, ax = plt.subplots(1)
+ax.plot(corr_range, corrz[0], c='r', label=r'$\langle S^z(r) S^z(0) \rangle$')
+ax.plot(corr_range, corrx[0], c='b', label=r'$\langle S^x(r) S^x(0) \rangle$')
+ax.plot(corr_range, corry[0], c='y', label=r'$\langle S^y(r) S^y(0) \rangle$')
+ax.set_xscale('log')
+ax.legend()
+fig.suptitle(rf'$g_2$ = {model_params["g2"]:.4}')
+
+plt.show()
