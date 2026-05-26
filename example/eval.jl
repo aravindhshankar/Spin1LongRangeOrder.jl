@@ -9,11 +9,11 @@ gr()
 ##
 let
   println(BLAS.get_config())
-  N = 200
+  N = 30
   sites = siteinds("S=1", N; conserve_sz=false)
   J = -1.0
-  g = -0.5 #g>0 orders in X-Y plane, g=0 is the critical point, g<0 orders in Z direction
-  g2 = -0.35 #g2 >0 favors X-Y plans, g2<0 favors Z axis
+  g = 0.01 #g>0 orders in X-Y plane, g=0 is the critical point, g<0 orders in Z direction
+  g2 = 0.05 #g2 >0 favors X-Y plans, g2<0 favors Z axis
   #we saw g2 = -0.3 is in XY FM state
   #       g2 = -0.4 is in Z FM state (gapped)
 
@@ -34,14 +34,14 @@ let
   #   psi_load = replace_siteinds(psi_load, sites)  # Replace siteinds to match the new sites
 
 
-  nsweeps = 6
+  nsweeps = 20
   #   maxdim = [100, 150, 200, 200 ,200 ,200,200, 200, 200, 200, 220, 220, 220, 250, 250, 250, 250, 250, 300, 300, 300, 350, 350, 350, 400, 400] # gradually increase states kept
-  maxdim = [50, 100, 200, 220]
+  maxdim = [20, 50, 50, 100, 150, 200, 220, 250]
   mindim = [10, 10, 2]
   eigsolve_krylovdim = 5
   cutoff = [1E-12]
   noise = [0, 1E-6, 0]
-  obsparams = (energy_tol=1E-3, minsweeps=5, energy_type=Float64)
+  obsparams = (energy_tol=1E-4, minsweeps=3, energy_type=Float64)
   observer = DMRGObserver(; obsparams...)
   # @profview dmrg(H_pert, psi_fm; nsweeps, maxdim, cutoff, mindim=mindim,
   #     eigsolve_krylovdim=eigsolve_krylovdim)
@@ -61,12 +61,17 @@ let
   xxcorr = correlation_matrix(psi, "Sx", "Sx")
   yycorr = correlation_matrix(psi, "Sy", "Sy")
   pmcorr = correlation_matrix(psi, "S+", "S-")
+  szvals = expect(psi, "Sz")
+  magz = sum(szvals) / N
+  @show magz
 
   xplotvals = range(start=1, length=N, step=1)
-  line1 = abs.(zzcorr[Int64(N // 2), :])
-  line2 = abs.(xxcorr[Int64(N // 2), :])
-  line3 = abs.(yycorr[Int64(N // 2), :])
-  line4 = abs.(pmcorr[Int64(N // 2), :])
+  # startplot = Int64(N // 2)
+  startplot = Int64(2)
+  line1 = abs.(zzcorr[startplot, :])
+  line2 = abs.(xxcorr[startplot, :])
+  line3 = abs.(yycorr[startplot, :])
+  line4 = abs.(pmcorr[startplot, :])
   p = plot(xplotvals, [line1, line2, line3, line4], ms=5, lw=2,
     label=["Sz-Sz" "Sx-Sx" "Sy-Sy" "+-"], xlabel="Distance", ylabel="Correlation",
     title="g1 = $(g) g2 = $(g2)", legend=:topright)
@@ -74,7 +79,8 @@ let
   # plot!(xscale=:identity, yscale=:identity, minorgrid=true)
   # plot!(xscale=:log10, yscale=:log10, minorgrid=true)
   #
-  # savefig(p, "figure.png")
+  savefig(p, "figure.png")
+  display(p)
   # println("saved")
   return
 end
