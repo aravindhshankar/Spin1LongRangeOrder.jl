@@ -30,13 +30,13 @@ function run_scan(N, J, g1, g2)
 
   H_pert = build_g1g2_hamiltonian(sites, J, g1, g2)
 
-  nsweeps = 20
+  nsweeps = 30
   maxdim = [20, 50, 100, 100, 150, 200, 220, 250, 300, 350]
   mindim = [10, 10, 2]
   eigsolve_krylovdim = 5
   cutoff = [1E-12]
   noise = [0, 1E-6, 0]
-  obsparams = (energy_tol=1E-5, minsweeps=3, energy_type=Float64)
+  obsparams = (energy_tol=1E-6, minsweeps=3, energy_type=Float64)
   observer = DMRGObserver(; obsparams...)
 
   energy, psi = dmrg(H_pert, psi; nsweeps, maxdim, cutoff, mindim,
@@ -102,7 +102,7 @@ let
   N = 20
   J = -1.0
   g1vals = [-0.2, -0.1, 0.1, 0.2]
-  g2vals = collect(-0.3:0.5:0.3)
+  g2vals = collect(-0.3:0.05:0.3)
 
   idx = Base.parse(Int, ENV["SLURM_ARRAY_TASK_ID"])
   g1 = g1vals[idx]
