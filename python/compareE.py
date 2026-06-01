@@ -34,8 +34,8 @@ class Spin1Chain(CouplingMPOModel):
         # H = -J (SxSx + SySy + SzSz)
 
         for u1, u2, dx in self.lat.pairs["nearest_neighbors"]:
-            self.add_coupling(-0.5*J, u1, "Sp", u2, "Sm", dx, plus_hc=True)
-            self.add_coupling(-J, u1, "Sz", u2, "Sz", dx)
+            self.add_coupling(0.5*J, u1, "Sp", u2, "Sm", dx, plus_hc=True)
+            self.add_coupling(J, u1, "Sz", u2, "Sz", dx)
 
         # --- single-ion anisotropy g1 (Sz)^2 ---
         for u in range(len(self.lat.unit_cell)):
@@ -61,9 +61,9 @@ class Spin1Chain(CouplingMPOModel):
 model_params = {
     "L": 2,                 # unit cell size for iMPS
     "S": 1,
-    "J": 1.0,
-    "g1": 0.5,
-    "g2": -0.3495,
+    "J": -1.0,
+    "g1": -0.2,
+    "g2": 0.275,
     "bc_MPS": "infinite",  # infinite boundary conditions
     "conserve": None,
 }
@@ -90,7 +90,7 @@ psi = MPS.from_product_state(
 dmrg_params = {
     "mixer": True,
     "trunc_params": {
-        "chi_max": 200,
+        "chi_max": 400,
         "svd_min": 1e-10,
     },
     "max_E_err": 1e-8,
