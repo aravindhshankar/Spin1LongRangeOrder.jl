@@ -14,9 +14,9 @@ const VARIANCE_THRESHOLD = 1e-3
 const G2_VALUES = collect(0.1:0.01:0.35)
 const N_VALUES = [16, 32, 64, 100, 128, 256]
 
-const LINKDIM_START_THRESH = [0, 50, 200, 400]
-const LINKDIM_UPPER_CAP = [100, 200, 500, 700]
-const LINKDIM_SCHEDULE_STEPS = [4, 8, 12, 12]
+const LINKDIM_START_THRESH = [0, 100, 400]
+const LINKDIM_UPPER_CAP = [220, 500, 800]
+const LINKDIM_SCHEDULE_STEPS = [16, 12, 12]
 
 fmt(x) = replace(@sprintf(" % .3f", x), " " => "")
 
@@ -74,7 +74,7 @@ function run_g2_dmrg(sites, J, g1, g2, psi_init)
   mindim = [2]
   eigsolve_krylovdim = 5
   cutoff = [1E-12]
-  noise = [1E-4, 1E-6, 0]
+  noise = [1E-3, 1E-4, 1E-5, 1E-6, 0]
   observer = build_dmrg_observer()
 
   energy, psi = dmrg(H, psi_init; nsweeps, maxdim, cutoff, mindim,
