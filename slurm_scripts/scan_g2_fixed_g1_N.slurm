@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-#SBATCH --job-name=scan_g2_fixed_g1_N
+#SBATCH --job-name=FSS_diffN
 #SBATCH --partition=cmsp,long
 #SBATCH --array=1-6
 #SBATCH --nodes=1
