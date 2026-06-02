@@ -10,15 +10,22 @@ using Printf
 gr()
 
 const G1_FIXED = -0.2
-const VARIANCE_THRESHOLD = 1e-4
-const G2_VALUES = collect(-0.3:0.05:0.3)
-const N_VALUES = [16, 32, 64, 128, 256]
+const VARIANCE_THRESHOLD = 1e-3
+const G2_VALUES = collect(0.1:0.01:0.35)
+const N_VALUES = [16, 32, 64, 100, 128, 256]
 
 const LINKDIM_START_THRESH = [0, 50, 200, 400]
 const LINKDIM_UPPER_CAP = [100, 200, 500, 700]
 const LINKDIM_SCHEDULE_STEPS = [4, 8, 12, 12]
 
 fmt(x) = replace(@sprintf(" % .3f", x), " " => "")
+
+function fig_dir(N, subdir="")
+  base = joinpath("pngfigs", "N$(N)")
+  path = subdir == "" ? base : joinpath(base, subdir)
+  mkpath(path)
+  return path
+end
 
 function build_boundary_pinned_state(sites, J, g1, g2;
     boundary_op="Sx", boundary_h=-10.0, n_anneal=1)
@@ -89,8 +96,7 @@ function save_scan_state(psi, N, g1, g2)
 end
 
 function plot_magnetization(N, g1, g2_vals, magzs)
-  figsavepath = joinpath("pngfigs", "N$(N)", "magz_vs_g2")
-  mkpath(figsavepath)
+  figsavepath = fig_dir(N, "magz_vs_g2")
   magfile = joinpath(figsavepath, "g1_$(fmt(g1))_magz_vs_g2.png")
 
   p = plot(g2_vals, magzs, marker=:circle, lw=2,
@@ -119,13 +125,13 @@ function run_g2_scan_for_N(N, J, g1)
     end
 
     energy, psi, var = run_g2_dmrg(sites, J, g1, g2, psi_init)
-    println("Finished DMRG for g2=$g2, variance=$var")
+    println("Finished DMRG for g2=$g2, variance=$var, energy density = ", energy / N)
 
     if var > VARIANCE_THRESHOLD
       println("Variance above threshold ($(VARIANCE_THRESHOLD)): retrying from pinned boundary state")
       psi_init = build_boundary_pinned_state(sites, J, g1, g2)
       energy, psi, var = run_g2_dmrg(sites, J, g1, g2, psi_init)
-      println("Retry finished, variance=$var")
+      println("Retry finished, variance=$var, energy density = ", energy / N)
       if var > VARIANCE_THRESHOLD
         println("Warning: variance still above threshold after retry for g2=$g2")
       end
@@ -133,8 +139,44 @@ function run_g2_scan_for_N(N, J, g1)
 
     save_scan_state(psi, N, g1, g2)
 
+    # Correlation matrices and magnetizations
+    zzcorr = correlation_matrix(psi, "Sz", "Sz")
+    xxcorr = correlation_matrix(psi, "Sx", "Sx")
+    yycorr = correlation_matrix(psi, "Sy", "Sy")
+    pmcorr = correlation_matrix(psi, "S+", "S-")
+
     szvals = expect(psi, "Sz")
     magz = sum(szvals) / N
+    magx = sum(expect(psi, "Sx")) / N
+    magy = sum(expect(psi, "Sy")) / N
+
+    println("---- Magnetization per site ----")
+    @show magz
+    @show magx
+    @show magy
+    println("--------------------------------")
+
+    # Save correlation plot
+    xplotvals = range(start=1, length=N, step=1)
+    startplot = Int(2)
+    line1 = abs.(zzcorr[startplot, :])
+    line2 = abs.(xxcorr[startplot, :])
+    line3 = abs.(yycorr[startplot, :])
+    line4 = abs.(pmcorr[startplot, :])
+
+    figsavepath = fig_dir(N)
+    figfilename = joinpath(figsavepath, "g1_$(fmt(g1))_g2_$(fmt(g2))_corr.png")
+
+    p = plot(xplotvals, [line1, line2, line3, line4], ms=5, lw=2,
+      label=["Sz-Sz" "Sx-Sx" "Sy-Sy" "+-"],
+      xlabel="Distance", ylabel="Correlation",
+      title="g1 = $(g1) g2 = $(g2) <Sz>=$(round(magz, digits=3)), <Sx>=$(round(magx, digits=3))",
+      legend=:topright)
+    plot!(xscale=:identity, yscale=:log10, minorgrid=true)
+
+    savefig(p, figfilename)
+    println("saved figure to $figfilename")
+
     push!(magzs, magz)
     psi_prev = psi
   end

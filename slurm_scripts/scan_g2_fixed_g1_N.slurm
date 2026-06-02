@@ -2,13 +2,13 @@
 #
 #SBATCH --job-name=scan_g2_fixed_g1_N
 #SBATCH --partition=cmsp,long
-#SBATCH --array=1-5
+#SBATCH --array=1-6
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=6
-#SBATCH --mem=10G
-#SBATCH --time=12:00:00
+#SBATCH --mem=16G
+#SBATCH --time=22:00:00
 #SBATCH --output=logs/%x_%j.out
 #SBATCH --mail-user=ashankar@ictp.it
 #SBATCH --mail-type=ALL
