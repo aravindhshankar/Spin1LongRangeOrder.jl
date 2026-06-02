@@ -22,8 +22,8 @@ function run_scan(N, J, g1, g2)
   n_anneal = 1
   for i in 1:n_anneal
     boundary_h_i = boundary_h * (1 - (i - 1) / n_anneal)
-    H_anneal = build_g1g2_hamiltonian(sites; J=J, g1=g1, g2=g2,
-      boundary_op=boundary_op, boundary_h=boundary_h_i)
+    H_anneal = build_g1g2_hamiltonian(sites, J, g1, g2,
+        boundary_op, boundary_h_i)
     energy, psi = dmrg(H_anneal, psi; nsweeps=3, maxdim=[20], cutoff=1e-10)
     println("Anneal step $i: boundary h = $boundary_h_i, energy density = ", energy / N)
   end

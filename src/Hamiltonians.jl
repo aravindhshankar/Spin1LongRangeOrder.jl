@@ -65,7 +65,6 @@ function build_g1g2_hamiltonian(sites::Vector, J::Real, g1::Real, g2::Real)
   end
   return MPO(os, sites)
 end
-build_g1g2_hamiltonian(sites::Vector; J::Real, g1::Real, g2::Real) = build_g1g2_hamiltonian(sites, J, g1, g2)
 
 """
     build_g1g2_hamiltonian(sites::Vector, J::Real, g1::Real, g2::Real, hx::Real, hz::Real)
@@ -88,7 +87,6 @@ function build_g1g2_hamiltonian(sites::Vector, J::Real, g1::Real, g2::Real, hx::
   end
   return MPO(os, sites)
 end
-build_g1g2_hamiltonian(sites::Vector; J::Real, g1::Real, g2::Real, hx::Real, hz::Real) = build_g1g2_hamiltonian(sites, J, g1, g2, hx, hz)
 
 """
 Build g1g2 Hamiltonian with boundary operator term added at the ends.
@@ -107,8 +105,6 @@ function build_g1g2_hamiltonian(sites::Vector, J::Real, g1::Real, g2::Real, boun
   os += boundary_h, boundary_op, N
   return MPO(os, sites)
 end
-build_g1g2_hamiltonian(sites::Vector; J::Real, g1::Real, g2::Real, boundary_op::String, boundary_h::Real) = build_g1g2_hamiltonian(sites, J, g1, g2, boundary_op, boundary_h)
-
 
 
 end # module Hamiltonians
