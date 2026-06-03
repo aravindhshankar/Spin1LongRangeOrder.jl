@@ -13,6 +13,7 @@ const G1_FIXED = -0.2
 const VARIANCE_THRESHOLD = 1e-3
 const G2_VALUES = collect(0.1:0.01:0.35)
 const N_VALUES = [16, 32, 64, 100, 128, 256]
+const RESTART_G2_START = Dict(64 => 0.20, 100 => 0.18, 128 => 0.16, 256 => 0.15)  # e.g., Dict(16 => 0.25, 32 => 0.20) to restart from specific g2
 
 const LINKDIM_START_THRESH = [0, 100, 400]
 const LINKDIM_UPPER_CAP = [220, 500, 800]
@@ -47,6 +48,24 @@ function build_dmrg_observer(etol=1E-6)
    minsweeps = 7
    obsparams = (energy_tol=etol, minsweeps=minsweeps, energy_type=Float64)
    return DMRGObserver(; obsparams...)
+end
+
+function try_load_prev_g2_state(N, g1, g2)
+  idx = findfirst(x -> x ≈ g2, G2_VALUES)
+  if idx === nothing || idx == 1
+    return nothing
+  end
+  
+  prev_g2 = G2_VALUES[idx - 1]
+  filename = joinpath("data", "N$(N)", "g1_$(fmt(g1))_g2_$(fmt(prev_g2)).h5")
+  
+  if isfile(filename)
+    psi = load_simulation(filename)
+    println("Loaded initial state from previous g2=$prev_g2")
+    return psi
+  end
+  
+  return nothing
 end
 
 
@@ -108,18 +127,28 @@ function plot_magnetization(N, g1, g2_vals, magzs)
   println("saved magz plot to $magfile")
 end
 
-function run_g2_scan_for_N(N, J, g1)
+function run_g2_scan_for_N(N, J, g1; start_g2=G2_VALUES[1])
   sites = siteinds("S=1", N; conserve_sz=false)
-  println("Running g2 scan for N=$N, g1=$g1")
+  println("Running g2 scan for N=$N, g1=$g1, starting from g2=$start_g2")
 
   psi_prev = nothing
   magzs = Float64[]
 
-  for (i, g2) in enumerate(G2_VALUES)
-    println("\n==== g2 step $i / $(length(G2_VALUES)): g2=$g2 ====")
+  start_idx = findfirst(x -> x ≈ start_g2, G2_VALUES)
+  start_idx === nothing && error("start_g2=$start_g2 not found in G2_VALUES")
+
+  for (i, g2) in enumerate(G2_VALUES[start_idx:end])
+    global_idx = start_idx + i - 1
+    println("\n==== g2 step $global_idx / $(length(G2_VALUES)): g2=$g2 ====")
 
     if psi_prev === nothing
-      psi_init = build_boundary_pinned_state(sites, J, g1, g2)
+      psi_init = try_load_prev_g2_state(N, g1, g2)
+      if psi_init === nothing
+        psi_init = build_boundary_pinned_state(sites, J, g1, g2)
+      else
+        psi_init = ITensorMPS.replace_siteinds(psi_init, sites)  # Align site indices if loaded from previous g2
+        # psi_init = Spin1LongRangeOrder.replace_siteinds(psi_init, sites) # Align site indices if loaded from previous g2
+      end
     else
       psi_init = psi_prev
     end
@@ -186,10 +215,13 @@ end
 ##
 let
   idx = Base.parse(Int, ENV["SLURM_ARRAY_TASK_ID"])
+  # idx = 3
   N = N_VALUES[idx]
+  @show N
   J = -1.0
   g1 = G1_FIXED
+  start_g2 = get(RESTART_G2_START, N, G2_VALUES[1])
 
-  println("SLURM_ARRAY_TASK_ID=$idx -> N=$N, g1=$g1")
-  run_g2_scan_for_N(N, J, g1)
+  println("SLURM_ARRAY_TASK_ID=$idx -> N=$N, g1=$g1, start_g2=$start_g2")
+  run_g2_scan_for_N(N, J, g1; start_g2=start_g2)
 end
