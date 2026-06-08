@@ -8,16 +8,7 @@ using LinearAlgebra
 using Printf
 gr()
 ##
-#------------------------------------------------------------------------------
-# 1D Hubbard model with spin-dependent NN repulsion — Kun Yang (2004)
-#
-# Hamiltonian (Eq. 1 of cond-mat/0401149, spin-dependent V branch):
-#
-#   H = -t  Σ_{i,σ} (c†_{i,σ} c_{i+1,σ} + h.c.)
-#       + U  Σ_i  n_{i↑} n_{i↓}
-#       + V^{++} Σ_i  (n_{i↑}n_{i+1,↑} + n_{i↓}n_{i+1,↓})   same-spin
-#       + V^{+-} Σ_i  (n_{i↑}n_{i+1,↓} + n_{i↓}n_{i+1,↑})   opposite-spin
-#
+
 # FM instability condition (paper, coefficient a of Eq. 7):
 #   a ∝ Σ_j j^2 (V^{+-}_j - V^{++}_j)  > 0
 #   i.e. Vpm > Vpp drives the ferromagnetic transition.
@@ -32,12 +23,12 @@ function make_sweeps()
     # The schedule has 50 rows; bond dim and noise saturate after row 6.
     base = [
         ("maxdim", "cutoff", "noise"),  
-        fill((20,   1e-6,  1e-4), 5)...,
-        fill((50,   1e-8,  1e-6), 5)...,
+        fill((20,   1e-6,  1e-4), 2)...,
+        fill((50,   1e-8,  1e-6), 2)...,
         fill((100,  1e-10, 1e-8), 5)...,
-        (200,  1e-12,  0.0),
-        # (400,  1e-10, 1e-10),
-        # (800,  1e-11, 0.0),
+        (200,  1e-10,  0.0),
+        (400,  1e-10, 1e-10),
+        (800,  1e-11, 0.0),
     ]
     max_sweeps = 50
     sw = Sweeps(max_sweeps, stack(base, dims=1))
@@ -76,9 +67,9 @@ function build_hamiltonian(sites, t, U, Vpp, Vpm)
     for i in 1:(N-1)
         # NN hopping (both spins)
         os += -t, "Cdagup", i, "Cup",    i+1
-        os += -t, "Cup",    i, "Cdagup", i+1   # h.c.
+        os +=  t, "Cup",    i, "Cdagup", i+1   # h.c.
         os += -t, "Cdagdn", i, "Cdn",    i+1
-        os += -t, "Cdn",    i, "Cdagdn", i+1   # h.c.
+        os +=  t, "Cdn",    i, "Cdagdn", i+1   # h.c.
 
         # V^{++}: same-spin NN repulsion (↑↑ and ↓↓)
         os += Vpp, "Nup", i, "Nup", i+1
@@ -100,13 +91,36 @@ end
 # ─── Initial MPS (alternating ↑↓, half filling) ──────────────────────────────
 function initial_mps(sites)
     N     = length(sites)
-    state = [isodd(i) ? "Up" : "Up" for i in 1:N]
-    return MPS(sites, state)
+    # state = [isodd(i) ? "Up" : "Dn" for i in 1:N]
+    # return MPS(sites, state)
+    Npart = length(sites) 
+    state = ["Emp" for n in 1:N]
+    p = Npart
+    for i in N:-1:1
+        if p > i
+            println("Doubly occupying site $i")
+            state[i] = "UpDn"
+            p -= 2
+        elseif p > 0
+            println("Singly occupying site $i")
+            state[i] = (isodd(i) ? "Up" : "Dn")
+            p -= 1
+        end
+    end
+    # Initialize wavefunction to be bond
+    # dimension 10 random MPS with number
+    # of particles the same as `state`
+    psi0 = random_mps(sites, state; linkdims = 10)
+
+    # Check total number of particles:
+    @show flux(psi0)
+    return psi0
 end
 
 # ─── Run a single DMRG calculation ───────────────────────────────────────────
 function run_dmrg(N, t, U, Vpp, Vpm; verbose=true)
-    sites = siteinds("Electron", N; conserve_nf=false, conserve_sz=false)
+    sites = siteinds("Electron", N; conserve_nf=true, conserve_sz=false)
+    # sites = siteinds("Electron", N; conserve_qns=true)
     H     = build_hamiltonian(sites, t, U, Vpp, Vpm)
     psi0  = initial_mps(sites)
     sw    = make_sweeps()
@@ -115,6 +129,11 @@ function run_dmrg(N, t, U, Vpp, Vpm; verbose=true)
     E, psi = dmrg(H, psi0, sw; outputlevel=verbose ? 1 : 0, observer=obs)
     var =   variance_gs(H, psi)
     @printf("\nGround state energy variance:  = %.2e\n", var)
+    print("Total electron density: ⟨N⟩ = ")
+    number_profile = expect(psi, "Ntot")
+    # @show number_profile
+    total_N = sum(number_profile)
+    @printf("%.4f  (expected %d)\n", total_N, N)
     return E, psi, sites
 end
 
@@ -222,11 +241,11 @@ end
 function main()
     N   = 8
     t   = 1.0
-    U   = 4.0
+    U   = 1.0
     # Vpp = 0.5    # V^{++}: same-spin NN repulsion
     # Vpm = 1.5    # V^{+-}: opposite-spin NN repulsion  (FM: Vpm > Vpp)
-    Vpp = 0.0
-    Vpm = 0.0
+    Vpp = 1e-6
+    Vpm = 1e-6
 
     println("="^65)
     println("1D Hubbard + spin-dependent NN repulsion (Kun Yang 2004)")
@@ -241,7 +260,7 @@ function main()
     @printf("Energy per site:       E/N = %.10f\n", E/N)
 
     measure(psi, sites)
-    entanglement_profile(psi)
+    # entanglement_profile(psi)
 
     # Uncomment to scan the FM transition:
     # scan_deltaV(N, t, U, Vpp)
@@ -249,15 +268,4 @@ end
 ## 
 main()
 
-##
-let 
-      base = [
-        fill((20,   1e-6,  1e-4),2)...,
-        fill((50,   1e-7,  1e-6), 2)...,
-        fill((100,  1e-8,  1e-8), 2)...,
-        (200,  1e-9,  0.0)
-        # (400,  1e-10, 1e-10),
-        # (800,  1e-11, 0.0),
-    ]
-    stack(base, dims=1)
-end
+
