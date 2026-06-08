@@ -241,11 +241,11 @@ end
 function main()
     N   = 8
     t   = 1.0
-    U   = 1.0
-    # Vpp = 0.5    # V^{++}: same-spin NN repulsion
-    # Vpm = 1.5    # V^{+-}: opposite-spin NN repulsion  (FM: Vpm > Vpp)
-    Vpp = 1e-6
-    Vpm = 1e-6
+    U   = 4.0
+    Vpp = 0.5    # V^{++}: same-spin NN repulsion
+    Vpm = 1.5    # V^{+-}: opposite-spin NN repulsion  (FM: Vpm > Vpp)
+    # Vpp = 1e-6
+    # Vpm = 1e-6
 
     println("="^65)
     println("1D Hubbard + spin-dependent NN repulsion (Kun Yang 2004)")
@@ -260,7 +260,7 @@ function main()
     @printf("Energy per site:       E/N = %.10f\n", E/N)
 
     measure(psi, sites)
-    # entanglement_profile(psi)
+    entanglement_profile(psi)
 
     # Uncomment to scan the FM transition:
     # scan_deltaV(N, t, U, Vpp)
