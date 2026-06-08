@@ -23,6 +23,7 @@ gr()
 #   i.e. Vpm > Vpp drives the ferromagnetic transition.
 #-------------------------------------------------------------------------------
 
+
 # ─── Sweep schedule ───────────────────────────────────────────────────────────
 # Up to 50 sweeps, ramping bond dimension and decreasing noise.
 # Early stopping is handled by EnergyObserver below.
@@ -30,21 +31,16 @@ function make_sweeps()
     # Each entry: (maxdim, cutoff, noise)
     # The schedule has 50 rows; bond dim and noise saturate after row 6.
     base = [
-        (20,   1e-6,  1e-4),
-        (50,   1e-7,  1e-5),
-        (100,  1e-8,  1e-6),
-        (200,  1e-9,  0.0),
+        ("maxdim", "cutoff", "noise"),  
+        fill((20,   1e-6,  1e-4), 5)...,
+        fill((50,   1e-8,  1e-6), 5)...,
+        fill((100,  1e-10, 1e-8), 5)...,
+        (200,  1e-12,  0.0),
         # (400,  1e-10, 1e-10),
         # (800,  1e-11, 0.0),
     ]
     max_sweeps = 50
-    sw = Sweeps(max_sweeps)
-    for k in 1:max_sweeps
-        md, cutoff, noise = base[min(k, length(base))]
-        maxdim!(sw, k, md)
-        cutoff!(sw, k, cutoff)
-        noise!(sw, k, noise)
-    end
+    sw = Sweeps(max_sweeps, stack(base, dims=1))
     return sw
 end
 
@@ -104,19 +100,21 @@ end
 # ─── Initial MPS (alternating ↑↓, half filling) ──────────────────────────────
 function initial_mps(sites)
     N     = length(sites)
-    state = [isodd(i) ? "Up" : "Dn" for i in 1:N]
+    state = [isodd(i) ? "Up" : "Up" for i in 1:N]
     return MPS(sites, state)
 end
 
 # ─── Run a single DMRG calculation ───────────────────────────────────────────
 function run_dmrg(N, t, U, Vpp, Vpm; verbose=true)
-    sites = siteinds("Electron", N; conserve_qns=true)
+    sites = siteinds("Electron", N; conserve_nf=false, conserve_sz=false)
     H     = build_hamiltonian(sites, t, U, Vpp, Vpm)
     psi0  = initial_mps(sites)
     sw    = make_sweeps()
 
     obs    = EnergyObserver(energy_tol=1e-4, min_sweeps=3)
     E, psi = dmrg(H, psi0, sw; outputlevel=verbose ? 1 : 0, observer=obs)
+    var =   variance_gs(H, psi)
+    @printf("\nGround state energy variance:  = %.2e\n", var)
     return E, psi, sites
 end
 
@@ -173,12 +171,25 @@ function measure(psi, sites; label="")
     return Sz, SzSz
 end
 
+""" Compute the von Neumann entanglement entropy S = -Tr(ρ log ρ) across bond b. """
+function entanglement_entropy(psi, b)
+  psi = orthogonalize(psi, b)
+  U,S,V = svd(psi[b], (linkinds(psi, b-1)..., siteinds(psi, b)...))
+  SvN = 0.0
+  for n=1:dim(S, 1)
+    p = S[n,n]^2
+    SvN -= p * log(p)
+  end
+return SvN
+end
+
+
 # ─── Entanglement entropy profile ────────────────────────────────────────────
 function entanglement_profile(psi)
     N = length(psi)
     println("\n  Entanglement entropy S(bond):")
     for b in 1:(N-1)
-        s   = entropy(psi, b)
+        s   = entanglement_entropy(psi, b)
         bar = repeat("█", round(Int, s * 10))
         @printf("  bond %2d–%2d:  S = %.4f  %s\n", b, b+1, s, bar)
     end
@@ -209,11 +220,13 @@ end
 
 # ─── Main ────────────────────────────────────────────────────────────────────
 function main()
-    N   = 20
+    N   = 8
     t   = 1.0
     U   = 4.0
-    Vpp = 0.5    # V^{++}: same-spin NN repulsion
-    Vpm = 1.5    # V^{+-}: opposite-spin NN repulsion  (FM: Vpm > Vpp)
+    # Vpp = 0.5    # V^{++}: same-spin NN repulsion
+    # Vpm = 1.5    # V^{+-}: opposite-spin NN repulsion  (FM: Vpm > Vpp)
+    Vpp = 0.0
+    Vpm = 0.0
 
     println("="^65)
     println("1D Hubbard + spin-dependent NN repulsion (Kun Yang 2004)")
@@ -227,11 +240,24 @@ function main()
     @printf("\nGround state energy:   E   = %.10f\n", E)
     @printf("Energy per site:       E/N = %.10f\n", E/N)
 
-    # measure(psi, sites)
+    measure(psi, sites)
     entanglement_profile(psi)
 
     # Uncomment to scan the FM transition:
     # scan_deltaV(N, t, U, Vpp)
 end
-
+## 
 main()
+
+##
+let 
+      base = [
+        fill((20,   1e-6,  1e-4),2)...,
+        fill((50,   1e-7,  1e-6), 2)...,
+        fill((100,  1e-8,  1e-8), 2)...,
+        (200,  1e-9,  0.0)
+        # (400,  1e-10, 1e-10),
+        # (800,  1e-11, 0.0),
+    ]
+    stack(base, dims=1)
+end
