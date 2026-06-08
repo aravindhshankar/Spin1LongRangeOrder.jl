@@ -16,18 +16,16 @@ gr()
 
 
 # ─── Sweep schedule ───────────────────────────────────────────────────────────
-# Up to 50 sweeps, ramping bond dimension and decreasing noise.
-# Early stopping is handled by EnergyObserver below.
 function make_sweeps()
     # Each entry: (maxdim, cutoff, noise)
     # The schedule has 50 rows; bond dim and noise saturate after row 6.
     base = [
         ("maxdim", "cutoff", "noise"),  
         fill((20,   1e-6,  1e-4), 2)...,
-        fill((50,   1e-8,  1e-6), 2)...,
-        fill((100,  1e-10, 1e-8), 5)...,
+        fill((50,   1e-8,  1e-6), 3)...,
+        fill((100,  1e-10, 0.0), 5)...,
         (200,  1e-10,  0.0),
-        (400,  1e-10, 1e-10),
+        (400,  1e-10, 0.0),
         (800,  1e-11, 0.0),
     ]
     max_sweeps = 50
@@ -119,14 +117,15 @@ end
 
 # ─── Run a single DMRG calculation ───────────────────────────────────────────
 function run_dmrg(N, t, U, Vpp, Vpm; verbose=true)
-    sites = siteinds("Electron", N; conserve_nf=true, conserve_sz=false)
+    sites = siteinds("Electron", N; conserve_nf=false, conserve_sz=false)
     # sites = siteinds("Electron", N; conserve_qns=true)
     H     = build_hamiltonian(sites, t, U, Vpp, Vpm)
     psi0  = initial_mps(sites)
     sw    = make_sweeps()
 
-    obs    = EnergyObserver(energy_tol=1e-4, min_sweeps=3)
-    E, psi = dmrg(H, psi0, sw; outputlevel=verbose ? 1 : 0, observer=obs)
+    obs    = EnergyObserver(energy_tol=1e-7, min_sweeps=6)
+    eigsolve_krylovdim = 5
+    E, psi = dmrg(H, psi0, sw; eigsolve_krylovdim, outputlevel=verbose ? 1 : 0, observer=obs)
     var =   variance_gs(H, psi)
     @printf("\nGround state energy variance:  = %.2e\n", var)
     print("Total electron density: ⟨N⟩ = ")
@@ -147,11 +146,15 @@ function measure(psi, sites; label="")
     double = expect(psi, "Nupdn")
 
     total_Sz    = sum(Sz)
+    Sz_per_spin = 0.5 * sum(Nup_v - Ndn_v ./ Ntot)  
+    @show Sz_per_spin
     total_N     = sum(Ntot)
     mean_double = sum(double) / N
+    total_Sz_per_spin = total_Sz/total_N
 
     label == "" || println("\n── $label ──")
     @printf("  Total ⟨Sz⟩     = %+.6f\n", total_Sz)
+    @printf("  Total ⟨Sz⟩ per spin     = %+.6f\n", total_Sz_per_spin)
     @printf("  Total ⟨N⟩      = %.4f  (expected %d)\n", total_N, N)
     @printf("  Mean ⟨n↑n↓⟩    = %.6f  (double occupancy)\n", mean_double)
 
@@ -173,11 +176,11 @@ function measure(psi, sites; label="")
     end
 
     # Spin structure factor S(q) = (1/N) Σ_{ij} cos(q(i-j)) ⟨Sz_i Sz_j⟩
-    println("\n  Spin structure factor S(q):")
-    for q in range(0, π, length=9)
-        Sq = sum(cos(q*(i-j)) * SzSz[i,j] for i in 1:N, j in 1:N) / N
-        @printf("    q/π = %.3f:  S(q) = %+.6f\n", q/π, Sq)
-    end
+    # println("\n  Spin structure factor S(q):")
+    # for q in range(0, π, length=9)
+    #     Sq = sum(cos(q*(i-j)) * SzSz[i,j] for i in 1:N, j in 1:N) / N
+    #     @printf("    q/π = %.3f:  S(q) = %+.6f\n", q/π, Sq)
+    # end
 
     if abs(total_Sz) > 0.3 * N / 2
         println("\n  >>> Strong ferromagnetic order detected!")
@@ -190,29 +193,7 @@ function measure(psi, sites; label="")
     return Sz, SzSz
 end
 
-""" Compute the von Neumann entanglement entropy S = -Tr(ρ log ρ) across bond b. """
-function entanglement_entropy(psi, b)
-  psi = orthogonalize(psi, b)
-  U,S,V = svd(psi[b], (linkinds(psi, b-1)..., siteinds(psi, b)...))
-  SvN = 0.0
-  for n=1:dim(S, 1)
-    p = S[n,n]^2
-    SvN -= p * log(p)
-  end
-return SvN
-end
 
-
-# ─── Entanglement entropy profile ────────────────────────────────────────────
-function entanglement_profile(psi)
-    N = length(psi)
-    println("\n  Entanglement entropy S(bond):")
-    for b in 1:(N-1)
-        s   = entanglement_entropy(psi, b)
-        bar = repeat("█", round(Int, s * 10))
-        @printf("  bond %2d–%2d:  S = %.4f  %s\n", b, b+1, s, bar)
-    end
-end
 
 # ─── Scan ΔV = V^{+-} - V^{++} to locate the FM transition ──────────────────
 function scan_deltaV(N=20, t=1.0, U=4.0, Vpp=0.5;
@@ -239,13 +220,18 @@ end
 
 # ─── Main ────────────────────────────────────────────────────────────────────
 function main()
-    N   = 8
-    t   = 1.0
-    U   = 4.0
-    Vpp = 0.5    # V^{++}: same-spin NN repulsion
-    Vpm = 1.5    # V^{+-}: opposite-spin NN repulsion  (FM: Vpm > Vpp)
+    N   = 16
+    t   = -1.0
+    U   = 1.0
+    Vpp = 0.1    # V^{++}: same-spin NN repulsion
+    # Vpm = 1.6171875 
+    Vpm = 1.6  # V^{+-}: opposite-spin NN repulsion  (FM: Vpm > Vpp)
     # Vpp = 1e-6
     # Vpm = 1e-6
+    Va = Vpp - Vpm 
+    @show Va
+    vacrit = (0.5 * U) - pi * abs(t)  #approximate value from bosonization
+    @show vacrit
 
     println("="^65)
     println("1D Hubbard + spin-dependent NN repulsion (Kun Yang 2004)")
@@ -259,8 +245,8 @@ function main()
     @printf("\nGround state energy:   E   = %.10f\n", E)
     @printf("Energy per site:       E/N = %.10f\n", E/N)
 
-    measure(psi, sites)
-    entanglement_profile(psi)
+    _ , _ = measure(psi, sites)
+    # entanglement_profile(psi)
 
     # Uncomment to scan the FM transition:
     # scan_deltaV(N, t, U, Vpp)
