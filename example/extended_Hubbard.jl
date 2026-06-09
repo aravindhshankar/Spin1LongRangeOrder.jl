@@ -206,9 +206,10 @@ function scan_deltaV(N=16, t=1.0, U=4.0, Vpp=0.5;
     println("  ", "-"^62)
     vacrit = (0.5 * U) - pi * abs(t)  #approximate value from bosonization
     @show vacrit
-    sites = siteinds("Electron", N; conserve_nf=true, conserve_sz=false)
-    psi = initial_mps(sites, Npart=N//2) # quarter filling
+    sites = siteinds("Electron", N; conserve_nf=false, conserve_sz=false)
+    psi = initial_mps(sites, Npart=N) 
     Sq0list = Float64[]
+    magzlist = Float64[]
 
     for dV in dV_range
         Vpm          = Vpp + dV
@@ -218,37 +219,39 @@ function scan_deltaV(N=16, t=1.0, U=4.0, Vpp=0.5;
         Sq0          = sum(SzSz) / N
         total_Sz     = abs(sum(Sz))
         push!(Sq0list, Sq0)
+        push!(magzlist, total_Sz/N)
         @printf("  %8.3f  %14.8f  %12.8f  %12.6f  %10.4f\n",
                 dV, E, E/N, total_Sz, Sq0)
     end
     # Plot S(q=0) vs ΔV:
     titlestring = "Predicted ΔV crit = " * @sprintf("%.3f", vacrit) * "\n(N=$N, t=$t, U=$U, V^{++}=$Vpp)"
     p = plot(dV_range, Sq0list, marker=:circle, xlabel="ΔV = V^{+-} - V^{++}", ylabel="S(q=0)", title=titlestring, legend=false)
+    plot!(dV_range, magzlist, marker=:cross,legend=false)
     display(p)
-    savefig(p, "pngfigs/plot_Sq0_vs_dV_N$N.png")
+    savefig(p, "pngfigs/plot_Sq0_vs_dV_N$N"*"_U$U"*"_Vpp" * @sprintf("%.3f", Vpp) * ".png")
 end
 
 # ─── Main ────────────────────────────────────────────────────────────────────
 function main()
-    N   = 16
+    N   = 8
     t   = 1.0
-    U   = 0.5
-    Vpp = 0.25    # V^{++}: same-spin NN repulsion
+    U   = 7
+    Vpp = 0.5    # V^{++}: same-spin NN repulsion
     # Vpm = 1.6171875 
-    Vpm = 1.6  # V^{+-}: opposite-spin NN repulsion  (FM: Vpm > Vpp)
+    # Vpm = 1.6  # V^{+-}: opposite-spin NN repulsion  (FM: Vpm > Vpp)
     # Vpp = 1e-6
     # Vpm = 1e-6
-    Va = Vpp - Vpm 
-    @show Va
+    # Va = Vpp - Vpm 
+    # @show Va
     # vacrit = (0.5 * U) - pi * abs(t)  #approximate value from bosonization
     # @show vacrit
 
-    println("="^65)
-    println("1D Hubbard + spin-dependent NN repulsion (Kun Yang 2004)")
-    println("FM transition via V^{+-} > V^{++} mechanism")
-    @printf("N=%d  t=%.2f  U=%.2f  V^{++}=%.2f  V^{+-}=%.2f\n", N, t, U, Vpp, Vpm)
-    @printf("ΔV = V^{+-} - V^{++} = %.2f  (> 0 drives FM)\n", Vpm - Vpp)
-    println("="^65)
+    # println("="^65)
+    # println("1D Hubbard + spin-dependent NN repulsion (Kun Yang 2004)")
+    # println("FM transition via V^{+-} > V^{++} mechanism")
+    # @printf("N=%d  t=%.2f  U=%.2f  V^{++}=%.2f  V^{+-}=%.2f\n", N, t, U, Vpp, Vpm)
+    # @printf("ΔV = V^{+-} - V^{++} = %.2f  (> 0 drives FM)\n", Vpm - Vpp)
+    # println("="^65)
 
     # E, psi, sites = run_dmrg(N, t, U, Vpp, Vpm)
 
@@ -259,7 +262,7 @@ function main()
     # entanglement_profile(psi)
 
     # Uncomment to scan the FM transition:
-    scan_deltaV(N, t, U, Vpp; dV_range=2.5:0.01:2.9)
+    scan_deltaV(N, t, U, Vpp; dV_range=0.0:0.1:1.5)
 end
 ## 
 main()
@@ -268,4 +271,5 @@ main()
 let 
     a = 3.14159
     str = "A" * @sprintf("%.2f", a)
+    7/2 - pi
 end
