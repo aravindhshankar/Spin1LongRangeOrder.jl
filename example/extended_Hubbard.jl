@@ -16,7 +16,7 @@ gr()
 
 
 # ─── Sweep schedule ───────────────────────────────────────────────────────────
-function make_sweeps()
+function make_sweeps(max_sweeps=50)
     # Each entry: (maxdim, cutoff, noise)
     # The schedule has 50 rows; bond dim and noise saturate after row 6.
     base = [
@@ -24,11 +24,10 @@ function make_sweeps()
         fill((20,   1e-6,  1e-4), 2)...,
         fill((50,   1e-8,  1e-6), 3)...,
         fill((100,  1e-10, 0.0), 5)...,
-        (200,  1e-10,  0.0),
+        fill((200,  1e-12,  0.0), 10)...,
         (400,  1e-10, 0.0),
-        (700,  1e-12, 0.0),
+        # (500,  1e-12, 0.0),
     ]
-    max_sweeps = 50
     sw = Sweeps(max_sweeps, stack(base, dims=1))
     return sw
 end
@@ -87,11 +86,11 @@ function build_hamiltonian(sites, t, U, Vpp, Vpm)
 end
 
 # ─── Initial MPS (alternating ↑↓, half filling) ──────────────────────────────
-function initial_mps(sites)
+function initial_mps(sites; Npart=nothing)
     N     = length(sites)
     # state = [isodd(i) ? "Up" : "Dn" for i in 1:N]
     # return MPS(sites, state)
-    Npart = length(sites) 
+    Npart = isnothing(Npart) ? length(sites) : Npart
     state = ["Emp" for n in 1:N]
     p = Npart
     for i in N:-1:1
@@ -121,10 +120,10 @@ function run_dmrg(N, t, U, Vpp, Vpm; sites=nothing, initial_psi=nothing, verbose
     # sites = siteinds("Electron", N; conserve_qns=true)
     H     = build_hamiltonian(sites, t, U, Vpp, Vpm)
     psi0  = isnothing(initial_psi) ? initial_mps(sites) : initial_psi
-    sw    = make_sweeps()
+    sw    = make_sweeps(100)
 
-    obs    = EnergyObserver(energy_tol=1e-7, min_sweeps=6)
-    eigsolve_krylovdim = 5
+    obs    = EnergyObserver(energy_tol=1e-5, min_sweeps=25)
+    eigsolve_krylovdim = 10
     E, psi = dmrg(H, psi0, sw; eigsolve_krylovdim, outputlevel=verbose ? 1 : 0, observer=obs)
     var =   variance_gs(H, psi)
     @printf("\nGround state energy variance:  = %.2e\n", var)
@@ -205,22 +204,33 @@ function scan_deltaV(N=16, t=1.0, U=4.0, Vpp=0.5;
     @printf("  %8s  %14s  %12s  %12s  %10s\n",
             "ΔV", "E", "E/N", "|⟨Sz_tot⟩|", "S(q=0)")
     println("  ", "-"^62)
+    vacrit = (0.5 * U) - pi * abs(t)  #approximate value from bosonization
+    @show vacrit
+    sites = siteinds("Electron", N; conserve_nf=true, conserve_sz=false)
+    psi = initial_mps(sites, Npart=N//2) # quarter filling
+    Sq0list = Float64[]
 
     for dV in dV_range
         Vpm          = Vpp + dV
-        E, psi, _   = run_dmrg(N, t, U, Vpp, Vpm; verbose=false)
+        E, psi, _   = run_dmrg(N, t, U, Vpp, Vpm; sites=sites, initial_psi=psi, verbose=false)
         Sz           = expect(psi, "Sz")
         SzSz         = correlation_matrix(psi, "Sz", "Sz")
         Sq0          = sum(SzSz) / N
         total_Sz     = abs(sum(Sz))
+        push!(Sq0list, Sq0)
         @printf("  %8.3f  %14.8f  %12.8f  %12.6f  %10.4f\n",
                 dV, E, E/N, total_Sz, Sq0)
     end
+    # Plot S(q=0) vs ΔV:
+    titlestring = "Predicted ΔV crit = " * @sprintf("%.3f", vacrit) * "\n(N=$N, t=$t, U=$U, V^{++}=$Vpp)"
+    p = plot(dV_range, Sq0list, marker=:circle, xlabel="ΔV = V^{+-} - V^{++}", ylabel="S(q=0)", title=titlestring, legend=false)
+    display(p)
+    savefig(p, "pngfigs/plot_Sq0_vs_dV_N$N.png")
 end
 
 # ─── Main ────────────────────────────────────────────────────────────────────
 function main()
-    N   = 8
+    N   = 16
     t   = 1.0
     U   = 0.5
     Vpp = 0.25    # V^{++}: same-spin NN repulsion
@@ -230,8 +240,8 @@ function main()
     # Vpm = 1e-6
     Va = Vpp - Vpm 
     @show Va
-    vacrit = (0.5 * U) - pi * abs(t)  #approximate value from bosonization
-    @show vacrit
+    # vacrit = (0.5 * U) - pi * abs(t)  #approximate value from bosonization
+    # @show vacrit
 
     println("="^65)
     println("1D Hubbard + spin-dependent NN repulsion (Kun Yang 2004)")
@@ -249,9 +259,13 @@ function main()
     # entanglement_profile(psi)
 
     # Uncomment to scan the FM transition:
-    scan_deltaV(N, t, U, Vpp; dV_range=2.4:0.02:2.8)
+    scan_deltaV(N, t, U, Vpp; dV_range=2.5:0.01:2.9)
 end
 ## 
 main()
 
 
+let 
+    a = 3.14159
+    str = "A" * @sprintf("%.2f", a)
+end
