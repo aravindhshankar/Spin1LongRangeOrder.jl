@@ -26,7 +26,7 @@ function make_sweeps()
         fill((100,  1e-10, 0.0), 5)...,
         (200,  1e-10,  0.0),
         (400,  1e-10, 0.0),
-        (800,  1e-11, 0.0),
+        (700,  1e-12, 0.0),
     ]
     max_sweeps = 50
     sw = Sweeps(max_sweeps, stack(base, dims=1))
@@ -96,11 +96,11 @@ function initial_mps(sites)
     p = Npart
     for i in N:-1:1
         if p > i
-            println("Doubly occupying site $i")
+            # println("Doubly occupying site $i")
             state[i] = "UpDn"
             p -= 2
         elseif p > 0
-            println("Singly occupying site $i")
+            # println("Singly occupying site $i")
             state[i] = (isodd(i) ? "Up" : "Dn")
             p -= 1
         end
@@ -111,16 +111,16 @@ function initial_mps(sites)
     psi0 = random_mps(sites, state; linkdims = 10)
 
     # Check total number of particles:
-    @show flux(psi0)
+    # @show flux(Spsi0)
     return psi0
 end
 
 # ─── Run a single DMRG calculation ───────────────────────────────────────────
-function run_dmrg(N, t, U, Vpp, Vpm; verbose=true)
-    sites = siteinds("Electron", N; conserve_nf=false, conserve_sz=false)
+function run_dmrg(N, t, U, Vpp, Vpm; sites=nothing, initial_psi=nothing, verbose=true)
+    sites = isnothing(sites) ? siteinds("Electron", N; conserve_nf=false, conserve_sz=false) : sites
     # sites = siteinds("Electron", N; conserve_qns=true)
     H     = build_hamiltonian(sites, t, U, Vpp, Vpm)
-    psi0  = initial_mps(sites)
+    psi0  = isnothing(initial_psi) ? initial_mps(sites) : initial_psi
     sw    = make_sweeps()
 
     obs    = EnergyObserver(energy_tol=1e-7, min_sweeps=6)
@@ -196,7 +196,7 @@ end
 
 
 # ─── Scan ΔV = V^{+-} - V^{++} to locate the FM transition ──────────────────
-function scan_deltaV(N=20, t=1.0, U=4.0, Vpp=0.5;
+function scan_deltaV(N=16, t=1.0, U=4.0, Vpp=0.5;
                      dV_range=0.0:0.25:2.0)
     println("\n", "="^65)
     println("Scanning ΔV = V^{+-} - V^{++} to locate FM transition")
@@ -220,10 +220,10 @@ end
 
 # ─── Main ────────────────────────────────────────────────────────────────────
 function main()
-    N   = 16
-    t   = -1.0
-    U   = 1.0
-    Vpp = 0.1    # V^{++}: same-spin NN repulsion
+    N   = 8
+    t   = 1.0
+    U   = 0.5
+    Vpp = 0.25    # V^{++}: same-spin NN repulsion
     # Vpm = 1.6171875 
     Vpm = 1.6  # V^{+-}: opposite-spin NN repulsion  (FM: Vpm > Vpp)
     # Vpp = 1e-6
@@ -240,16 +240,16 @@ function main()
     @printf("ΔV = V^{+-} - V^{++} = %.2f  (> 0 drives FM)\n", Vpm - Vpp)
     println("="^65)
 
-    E, psi, sites = run_dmrg(N, t, U, Vpp, Vpm)
+    # E, psi, sites = run_dmrg(N, t, U, Vpp, Vpm)
 
-    @printf("\nGround state energy:   E   = %.10f\n", E)
-    @printf("Energy per site:       E/N = %.10f\n", E/N)
+    # @printf("\nGround state energy:   E   = %.10f\n", E)
+    # @printf("Energy per site:       E/N = %.10f\n", E/N)
 
-    _ , _ = measure(psi, sites)
+    # _ , _ = measure(psi, sites)
     # entanglement_profile(psi)
 
     # Uncomment to scan the FM transition:
-    # scan_deltaV(N, t, U, Vpp)
+    scan_deltaV(N, t, U, Vpp; dV_range=2.4:0.02:2.8)
 end
 ## 
 main()
