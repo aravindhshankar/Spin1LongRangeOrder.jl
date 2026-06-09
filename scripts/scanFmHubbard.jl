@@ -9,12 +9,6 @@ using Printf
 gr()
 ##
 
-# FM instability condition (paper, coefficient a of Eq. 7):
-#   a ∝ Σ_j j^2 (V^{+-}_j - V^{++}_j)  > 0
-#   i.e. Vpm > Vpp drives the ferromagnetic transition.
-#-------------------------------------------------------------------------------
-
-
 # ─── Sweep schedule ───────────────────────────────────────────────────────────
 function make_sweeps(max_sweeps=50)
     # Each entry: (maxdim, cutoff, noise)
@@ -227,49 +221,28 @@ function scan_deltaV(N=16, t=1.0, U=4.0, Vpp=0.5;
     titlestring = "Predicted ΔV crit = " * @sprintf("%.3f", vacrit) * "\n(N=$N, t=$t, U=$U, V^{++}=$Vpp)"
     p = plot(dV_range, Sq0list, marker=:circle, xlabel="ΔV = V^{+-} - V^{++}", ylabel="S(q=0)", title=titlestring, legend=false)
     plot!(dV_range, magzlist, marker=:cross,legend=false)
-    display(p)
-    savefig(p, "pngfigs/plot_Sq0_vs_dV_N$N"*"_U$U"*"_Vpp" * @sprintf("%.3f", Vpp) * ".png")
+    # display(p)
+    savedir = "pngfigs/Hubbard/N$N/"
+    mkpath(savedir) #tested that it works
+    savefilename = savedir * "Sq0_vs_dV_N$N"*"_U"*@sprintf("%.3f", U)*"_Vpp" * @sprintf("%.3f", Vpp) * ".png"
+    savefig(p, savefilename)
 end
 
 # ─── Main ────────────────────────────────────────────────────────────────────
 function main()
     N   = 16
     t   = 1.0
-    U   = 0.1
-    Vpp = -1.0    # V^{++}: same-spin NN repulsion
-    # Vpm = 1.6171875 
-    # Vpm = 1.6  # V^{+-}: opposite-spin NN repulsion  (FM: Vpm > Vpp)
-    # Vpp = 1e-6
-    # Vpm = 1e-6
-    # Va = Vpp - Vpm 
-    # @show Va
-    # vacrit = (0.5 * U) - pi * abs(t)  #approximate value from bosonization
-    # @show vacrit
-
-    # println("="^65)
-    # println("1D Hubbard + spin-dependent NN repulsion (Kun Yang 2004)")
-    # println("FM transition via V^{+-} > V^{++} mechanism")
-    # @printf("N=%d  t=%.2f  U=%.2f  V^{++}=%.2f  V^{+-}=%.2f\n", N, t, U, Vpp, Vpm)
-    # @printf("ΔV = V^{+-} - V^{++} = %.2f  (> 0 drives FM)\n", Vpm - Vpp)
-    # println("="^65)
-
-    # E, psi, sites = run_dmrg(N, t, U, Vpp, Vpm)
-
-    # @printf("\nGround state energy:   E   = %.10f\n", E)
-    # @printf("Energy per site:       E/N = %.10f\n", E/N)
-
-    # _ , _ = measure(psi, sites)
-    # entanglement_profile(psi)
-
-    # Uncomment to scan the FM transition:
-    scan_deltaV(N, t, U, Vpp; dV_range=0.0:0.1:5.0)
+    idx = Base.parse(Int, ENV["SLURM_ARRAY_TASK_ID"])
+    # idx = 1
+    Ulist = (0.1, 0.3, 0.5, 1.0, 3.0, 7.0) 
+    U = Ulist[idx]
+    Vpplist = (-2.0, -1.0, 0.1, 0.2, 0.5, 0.8, 1.0, 1.2, 1.5, 2.0, 5.0, 7.0)
+    for Vpp in Vpplist
+        scan_deltaV(N, t, U, Vpp; dV_range=0.0:0.1:3.5)
+    end #for
 end
 ## 
-main()
-
-
 let 
-    a = 3.14159
-    str = "A" * @sprintf("%.2f", a)
-    7/2 - pi
+    main()
 end
+
