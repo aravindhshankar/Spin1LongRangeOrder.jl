@@ -13,4 +13,5 @@ using .Hamiltonians
 export save_simulation, load_simulation, mps_equal, mps_tensor_equal, replace_siteinds
 export LoadmpsPlotCorr
 export variance_gs
+export entanglement_entropy, entanglement_profile
 end

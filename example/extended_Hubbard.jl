@@ -122,7 +122,7 @@ function run_dmrg(N, t, U, Vpp, Vpm; sites=nothing, initial_psi=nothing, verbose
     psi0  = isnothing(initial_psi) ? initial_mps(sites) : initial_psi
     sw    = make_sweeps(100)
 
-    obs    = EnergyObserver(energy_tol=1e-5, min_sweeps=10)
+    obs    = EnergyObserver(energy_tol=1e-8, min_sweeps=15)
     eigsolve_krylovdim = 10
     @time E, psi = dmrg(H, psi0, sw; eigsolve_krylovdim, outputlevel=verbose ? 1 : 0, observer=obs)
     var =   variance_gs(H, psi)
@@ -233,43 +233,54 @@ end
 
 # ─── Main ────────────────────────────────────────────────────────────────────
 function main()
-    N   = 16
+    N   = 32
     t   = 1.0
-    U   = 0.1
-    Vpp = -1.0    # V^{++}: same-spin NN repulsion
-    # Vpm = 1.6171875 
+    U   = 1.0
+    Vpp = 1.0    # V^{++}: same-spin NN repulsion
+    Vpm = 3.8 
     # Vpm = 1.6  # V^{+-}: opposite-spin NN repulsion  (FM: Vpm > Vpp)
     # Vpp = 1e-6
     # Vpm = 1e-6
-    # Va = Vpp - Vpm 
-    # @show Va
-    # vacrit = (0.5 * U) - pi * abs(t)  #approximate value from bosonization
-    # @show vacrit
+    Va = Vpp - Vpm 
+    @show Va
+    vacrit = (0.5 * U) - pi * abs(t)  #approximate value from bosonization
+    @show vacrit
 
-    # println("="^65)
-    # println("1D Hubbard + spin-dependent NN repulsion (Kun Yang 2004)")
-    # println("FM transition via V^{+-} > V^{++} mechanism")
-    # @printf("N=%d  t=%.2f  U=%.2f  V^{++}=%.2f  V^{+-}=%.2f\n", N, t, U, Vpp, Vpm)
-    # @printf("ΔV = V^{+-} - V^{++} = %.2f  (> 0 drives FM)\n", Vpm - Vpp)
-    # println("="^65)
+    println("="^65)
+    println("1D Hubbard + spin-dependent NN repulsion (Kun Yang 2004)")
+    println("FM transition via V^{+-} > V^{++} mechanism")
+    @printf("N=%d  t=%.2f  U=%.2f  V^{++}=%.2f  V^{+-}=%.2f\n", N, t, U, Vpp, Vpm)
+    @printf("ΔV = V^{+-} - V^{++} = %.2f  (> 0 drives FM)\n", Vpm - Vpp)
+    println("="^65)
 
-    # E, psi, sites = run_dmrg(N, t, U, Vpp, Vpm)
+    E, psi, sites = run_dmrg(N, t, U, Vpp, Vpm)
+    fermicorrmat = correlation_matrix(psi, "Cup", "Cdagup")
+    densitycorrmat = correlation_matrix(psi, "Ntot", "Ntot")
+    xaxis = 1:N 
+   
 
-    # @printf("\nGround state energy:   E   = %.10f\n", E)
-    # @printf("Energy per site:       E/N = %.10f\n", E/N)
+    @printf("\nGround state energy:   E   = %.10f\n", E)
+    @printf("Energy per site:       E/N = %.10f\n", E/N)
 
-    # _ , _ = measure(psi, sites)
-    # entanglement_profile(psi)
+    _ , _ = measure(psi, sites)
+    entanglement_profile(psi)
+
+    p = plot(xaxis[2:end], abs.(fermicorrmat[1,2:end]), marker=:cicle, label="c^dag_up(1)c_up(x)")
+    plot!(xaxis, abs.(densitycorrmat[1,:] .-(13/32)), marker=:cross, label="n(1)n(x) - <n>")
+    plot!(xscale=:log10, yscale=:log10)
+    titlestring = "Predicted ΔV crit = " * @sprintf("%.3f", vacrit) * "\n(N=$N, t=$t, U=$U, V^{++}=$Vpp, V^{+-}=$Vpm)"
+    plot!(title=titlestring)
+    plot!(legend=:outerbottom, legendcolumns=2)
+    display(p)
 
     # Uncomment to scan the FM transition:
-    scan_deltaV(N, t, U, Vpp; dV_range=0.0:0.1:5.0)
+    # scan_deltaV(N, t, U, Vpp; dV_range=0.0:0.1:5.0)
 end
 ## 
 main()
 
-
+##
 let 
-    a = 3.14159
-    str = "A" * @sprintf("%.2f", a)
-    7/2 - pi
+  a = [1, 2, 4 , 5]
+  a[2:end] .-2
 end
