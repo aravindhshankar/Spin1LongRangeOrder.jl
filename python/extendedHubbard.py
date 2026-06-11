@@ -48,12 +48,12 @@ class HubbardSpinDepV(CouplingMPOModel):
         mu    : float — chemical potential (default 0.0, half filling)
         bc_MPS    : 'infinite' or 'finite'
         L         : unit cell / chain length
-        conserve  : 'best', 'N', 'Sz', or 'None'
     """
 
     def init_sites(self, model_params):
-        conserve = model_params.get("conserve", "best")
-        return SpinHalfFermionSite(conserve=conserve)
+        cons_N = model_params.get("cons_N", "None")
+        cons_Sz = model_params.get("cons_Sz", "None")
+        return SpinHalfFermionSite(cons_N = cons_N, cons_Sz = cons_Sz)
 
     def init_terms(self, model_params):
         t   = model_params.get("t",   1.0)
@@ -70,12 +70,12 @@ class HubbardSpinDepV(CouplingMPOModel):
         self.add_onsite(U, 0, "NuNd")
 
         # V^{++}: same-spin NN repulsion  (↑↑ and ↓↓)
-        self.add_coupling(Vpp, 0, "Nup", 0, "Nup", 1)
-        self.add_coupling(Vpp, 0, "Ndown", 0, "Ndown", 1)
+        self.add_coupling(Vpp, 0, "Nu", 0, "Nu", 1)
+        self.add_coupling(Vpp, 0, "Nd", 0, "Nd", 1)
 
         # V^{+-}: opposite-spin NN repulsion  (↑↓ and ↓↑)
-        self.add_coupling(Vpm, 0, "Nup",   0, "Ndown", 1)
-        self.add_coupling(Vpm, 0, "Ndown", 0, "Nup",   1)
+        self.add_coupling(Vpm, 0, "Nu",   0, "Nd", 1)
+        self.add_coupling(Vpm, 0, "Nd", 0, "Nu",   1)
 
         # Chemical potential
         if abs(mu) > 1e-12:
@@ -100,12 +100,11 @@ def run_idmrg(t=1.0, U=4.0, Vpp=0.5, Vpm=1.5, chi_max=300, n_sweeps=12,
         t=t, U=U, Vpp=Vpp, Vpm=Vpm, mu=0.0,
         bc_MPS="infinite",
         L=2,
-        conserve="best",
     )
     model = HubbardSpinDepV(model_params)
 
     # Half-filling, Sz=0 initial state
-    psi = MPS.from_lat_product_state(model.lat, ["up", "down"])
+    psi = MPS.from_product_state(model.lat.mps_sites(), ["up", "down"] , bc=model.lat.bc_MPS)
 
     dmrg_params = {
         "trunc_params": {
@@ -137,8 +136,8 @@ def run_idmrg(t=1.0, U=4.0, Vpp=0.5, Vpm=1.5, chi_max=300, n_sweeps=12,
 
 def _report_idmrg(E, psi):
     Sz    = psi.expectation_value("Sz")
-    Nup   = psi.expectation_value("Nup")
-    Ndown = psi.expectation_value("Ndown")
+    Nup   = psi.expectation_value("Nu")
+    Ndown = psi.expectation_value("Nd")
     Ntot  = psi.expectation_value("Ntot")
 
     print(f"\nGround state energy per site: E/N = {E:.10f}")
@@ -193,7 +192,8 @@ def run_finite_dmrg(N=20, t=1.0, U=4.0, Vpp=0.5, Vpm=1.5,
         t=t, U=U, Vpp=Vpp, Vpm=Vpm, mu=0.0,
         bc_MPS="finite",
         L=N,
-        conserve="best",
+        cons_N="None",
+        cons_Sz="None",
     )
     model = HubbardSpinDepV(model_params)
 
@@ -292,10 +292,10 @@ if __name__ == "__main__":
     parser.add_argument("--mode",   choices=["idmrg", "finite", "scan"],
                         default="idmrg")
     parser.add_argument("--t",      type=float, default=1.0)
-    parser.add_argument("--U",      type=float, default=4.0)
-    parser.add_argument("--Vpp",    type=float, default=0.5,
+    parser.add_argument("--U",      type=float, default=1.0)
+    parser.add_argument("--Vpp",    type=float, default=1.0,
                         help="V^{++}: same-spin NN repulsion")
-    parser.add_argument("--Vpm",    type=float, default=1.5,
+    parser.add_argument("--Vpm",    type=float, default=3.5,
                         help="V^{+-}: opposite-spin NN repulsion (FM: Vpm > Vpp)")
     parser.add_argument("--N",      type=int,   default=20,
                         help="chain length (finite mode only)")

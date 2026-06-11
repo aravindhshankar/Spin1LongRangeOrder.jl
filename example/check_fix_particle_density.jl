@@ -57,7 +57,7 @@ function ITensorMPS.checkdone!(obs::EnergyObserver; energy, sweep, kwargs...)
 end
 
 # ─── Build MPO ────────────────────────────────────────────────────────────────
-function build_hamiltonian(sites, t, U, Vpp, Vpm)
+function build_hamiltonian(sites, t, U, Vpp, Vpm; bpin=0)
     N  = length(sites)
     os = OpSum()
 
@@ -78,9 +78,21 @@ function build_hamiltonian(sites, t, U, Vpp, Vpm)
 
         # On-site Hubbard U
         os += U, "Nupdn", i
+
+        if abs(bpin) > 1e-14
+            os += bpin, "Cdagup", i, "Cdagdn", i
+            os += bpin, "Cdn", i, "Cup", i
+        end
     end
 
     os += U, "Nupdn", N  # On-site U for the last site
+    # if abs(bpin) > 1e-14
+    #     opvec = ["Cup", "Cdn", "Cdagup", "Cdagdn"]
+    #     for opair in Iterators.product(opvec, opvec)
+    #         os += bpin, opair[1], 1, opair[2], 1
+    #         os += bpin, opair[1], N, opair[2], N 
+    #     end
+    # end
 
     return MPO(os, sites)
 end
@@ -115,12 +127,12 @@ function initial_mps(sites; Npart=nothing)
 end
 
 # ─── Run a single DMRG calculation ───────────────────────────────────────────
-function run_dmrg(N, t, U, Vpp, Vpm; sites=nothing, initial_psi=nothing, verbose=true)
+function run_dmrg(N, t, U, Vpp, Vpm; sites=nothing, initial_psi=nothing, sweepcount=100, bpin=0, verbose=true)
     sites = isnothing(sites) ? siteinds("Electron", N; conserve_nf=false, conserve_sz=false) : sites
     # sites = siteinds("Electron", N; conserve_qns=true)
-    H     = build_hamiltonian(sites, t, U, Vpp, Vpm)
+    H     = build_hamiltonian(sites, t, U, Vpp, Vpm; bpin)
     psi0  = isnothing(initial_psi) ? initial_mps(sites) : initial_psi
-    sw    = make_sweeps(100)
+    sw    = make_sweeps(sweepcount)
 
     obs    = EnergyObserver(energy_tol=1e-8, min_sweeps=15)
     eigsolve_krylovdim = 10
@@ -157,28 +169,28 @@ function measure(psi, sites; label="")
     @printf("  Total ⟨N⟩      = %.4f  (expected %d)\n", total_N, N)
     @printf("  Mean ⟨n↑n↓⟩    = %.6f  (double occupancy)\n", mean_double)
 
-    println("\n  Site-resolved observables:")
-    println("  ", "-"^55)
-    @printf("  %4s  %8s  %8s  %8s  %8s\n", "site", "⟨Sz⟩", "⟨n↑⟩", "⟨n↓⟩", "⟨ntot⟩")
-    println("  ", "-"^55)
-    for i in 1:N
-        @printf("  %4d  %+8.5f  %8.5f  %8.5f  %8.5f\n",
-                i, Sz[i], Nup_v[i], Ndn_v[i], Ntot[i])
-    end
+    # println("\n  Site-resolved observables:")
+    # println("  ", "-"^55)
+    # @printf("  %4s  %8s  %8s  %8s  %8s\n", "site", "⟨Sz⟩", "⟨n↑⟩", "⟨n↓⟩", "⟨ntot⟩")
+    # println("  ", "-"^55)
+    # for i in 1:N
+    #     @printf("  %4d  %+8.5f  %8.5f  %8.5f  %8.5f\n",
+    #             i, Sz[i], Nup_v[i], Ndn_v[i], Ntot[i])
+    # end
 
     # Spin-spin correlations from the central site
-    mid  = N ÷ 2
+    # mid  = N ÷ 2
     SzSz = correlation_matrix(psi, "Sz", "Sz")
-    println("\n  ⟨Sz_$(mid) Sz_j⟩ spin correlations:")
-    for j in 1:N
-        @printf("    j=%2d: %+.6f\n", j, SzSz[mid, j])
-    end
+    # println("\n  ⟨Sz_$(mid) Sz_j⟩ spin correlations:")
+    # for j in 1:N
+    #     @printf("    j=%2d: %+.6f\n", j, SzSz[mid, j])
+    # end
 
     # Spin structure factor S(q) = (1/N) Σ_{ij} cos(q(i-j)) ⟨Sz_i Sz_j⟩
     # println("\n  Spin structure factor S(q):")
     # for q in range(0, π, length=9)
-    #     Sq = sum(cos(q*(i-j)) * SzSz[i,j] for i in 1:N, j in 1:N) / N
-    #     @printf("    q/π = %.3f:  S(q) = %+.6f\n", q/π, Sq)
+        # Sq = sum(cos(q*(i-j)) * SzSz[i,j] for i in 1:N, j in 1:N) / N
+        # @printf("    q/π = %.3f:  S(q) = %+.6f\n", q/π, Sq)
     # end
 
     if abs(total_Sz) > 0.3 * N / 2
@@ -189,7 +201,7 @@ function measure(psi, sites; label="")
         println("\n  >>> No ferromagnetic order at these parameters.")
     end
 
-    return Sz, SzSz
+    return Sz, SzSz, total_N
 end
 
 
@@ -233,7 +245,7 @@ end
 
 # ─── Main ────────────────────────────────────────────────────────────────────
 function main()
-    N   = 8
+    N   = 32
     t   = 1.0
     U   = 1.0
     Vpp = 1.0    # V^{++}: same-spin NN repulsion
@@ -247,23 +259,49 @@ function main()
     @show vacrit
 
     println("="^65)
-    println("1D Hubbard + spin-dependent NN repulsion (Kun Yang 2004)")
-    println("FM transition via V^{+-} > V^{++} mechanism")
     @printf("N=%d  t=%.2f  U=%.2f  V^{++}=%.2f  V^{+-}=%.2f\n", N, t, U, Vpp, Vpm)
-    @printf("ΔV = V^{+-} - V^{++} = %.2f  (> 0 drives FM)\n", Vpm - Vpp)
+    @printf("ΔV = V^{+-} - V^{++} = %.2f  \n", Vpm - Vpp)
     println("="^65)
 
-    E, psi, sites = run_dmrg(N, t, U, Vpp, Vpm)
+    sites_unconstrained = siteinds("Electron", N; conserve_nf=false, conserve_sz=false)
+    psi_even = initial_mps(sites_unconstrained, Npart=N)
+    psi_odd = initial_mps(sites_unconstrained, Npart=N-1)
+
+    sites_const = siteinds("Electron", N; conserve_nf=true, conserve_sz=false)
+
+
+    E_even, psi_even, _ = run_dmrg(N, t, U, Vpp, Vpm; sites = sites_unconstrained, bpin=1E-5, sweepcount=8)
+    _,_, neven = measure(psi_even, sites_unconstrained)
+    E_odd, psi_odd, _  = run_dmrg(N, t, U, Vpp, Vpm; sites = sites_unconstrained, bpin=1E-5, sweepcount=8)
+    _,_, nodd = measure(psi_odd, sites_unconstrained)
+    @show E_even, E_odd
+    println("Now removed pinning field")
+    # psi = E_even < E_odd ? psi_even : psi_odd
+    Npart = E_even < E_odd ? neven : nodd
+    psi = initial_mps(sites_const; Npart)
+    E, psi, _ = run_dmrg(N, t, U, Vpp, Vpm; sites = sites_const, initial_psi = psi, bpin=0, sweepcount=100)
+    @printf("\nGround state energy:   E   = %.10f\n", E)
+    @printf("Energy per site:       E/N = %.10f\n", E/N)
+    _ , _, _ = measure(psi, sites_const)
+    # entanglement_profile(psi)
+    
+    
+    println("-"^20)
+    println("Direct")
+    println("-"^20)
+    Edirect, psidirect, sites_from_direct = run_dmrg(N, t, U, Vpp, Vpm; sites=nothing, initial_psi = nothing, bpin=0, sweepcount=100)
+    _,_ = measure(psidirect, sites_from_direct)
+    @show Edirect, E
+
+
     fermicorrmat = correlation_matrix(psi, "Cup", "Cdagup")
     densitycorrmat = correlation_matrix(psi, "Ntot", "Ntot")
     xaxis = 1:N 
    
 
-    @printf("\nGround state energy:   E   = %.10f\n", E)
-    @printf("Energy per site:       E/N = %.10f\n", E/N)
 
-    _ , _ = measure(psi, sites)
-    entanglement_profile(psi)
+
+
 
     p = plot(xaxis[2:end], abs.(fermicorrmat[1,2:end]), marker=:cicle, label="c^dag_up(1)c_up(x)")
     plot!(xaxis, abs.(densitycorrmat[1,:] .-(13/32)), marker=:cross, label="n(1)n(x) - <n>")
@@ -280,7 +318,7 @@ end
 main()
 
 ##
-let 
-  a = [1, 2, 4 , 5]
-  a[2:end] .-2
-end
+# let 
+#   a = [1, 2, 4 , 5]
+#   Iterators.product(a, a)
+# end
