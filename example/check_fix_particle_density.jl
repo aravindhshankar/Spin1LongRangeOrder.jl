@@ -21,9 +21,9 @@ function make_sweeps(max_sweeps=50)
     # The schedule has 50 rows; bond dim and noise saturate after row 6.
     base = [
         ("maxdim", "cutoff", "noise"),  
-        fill((20,   1e-6,  1e-4), 2)...,
-        fill((50,   1e-8,  1e-6), 3)...,
-        fill((100,  1e-10, 0.0), 5)...,
+        fill((20,   1e-8,  1e-4), 2)...,
+        fill((50,   1e-8,  1e-6), 4)...,
+        fill((100,  1e-10, 1e-8), 5)...,
         fill((200,  1e-12,  0.0), 10)...,
         (400,  1e-10, 0.0),
         # (500,  1e-12, 0.0),
@@ -249,7 +249,7 @@ function main()
     t   = 1.0
     U   = 1.0
     Vpp = 1.0    # V^{++}: same-spin NN repulsion
-    Vpm = 3.8 
+    Vpm = 3.18 
     # Vpm = 1.6  # V^{+-}: opposite-spin NN repulsion  (FM: Vpm > Vpp)
     # Vpp = 1e-6
     # Vpm = 1e-6
@@ -277,7 +277,8 @@ function main()
     @show E_even, E_odd
     println("Now removed pinning field")
     # psi = E_even < E_odd ? psi_even : psi_odd
-    Npart = E_even < E_odd ? neven : nodd
+    Npart = E_even < E_odd ? Int(round(neven)) : Int(round(nodd))
+    @show Npart
     psi = initial_mps(sites_const; Npart)
     E, psi, _ = run_dmrg(N, t, U, Vpp, Vpm; sites = sites_const, initial_psi = psi, bpin=0, sweepcount=100)
     @printf("\nGround state energy:   E   = %.10f\n", E)
@@ -286,12 +287,12 @@ function main()
     # entanglement_profile(psi)
     
     
-    println("-"^20)
-    println("Direct")
-    println("-"^20)
-    Edirect, psidirect, sites_from_direct = run_dmrg(N, t, U, Vpp, Vpm; sites=nothing, initial_psi = nothing, bpin=0, sweepcount=100)
-    _,_ = measure(psidirect, sites_from_direct)
-    @show Edirect, E
+    # println("-"^20)
+    # println("Direct")
+    # println("-"^20)
+    # Edirect, psidirect, sites_from_direct = run_dmrg(N, t, U, Vpp, Vpm; sites=nothing, initial_psi = nothing, bpin=0, sweepcount=100)
+    # _,_ = measure(psidirect, sites_from_direct)
+    # @show Edirect, E
 
 
     fermicorrmat = correlation_matrix(psi, "Cup", "Cdagup")
@@ -304,7 +305,7 @@ function main()
 
 
     p = plot(xaxis[2:end], abs.(fermicorrmat[1,2:end]), marker=:cicle, label="c^dag_up(1)c_up(x)")
-    plot!(xaxis, abs.(densitycorrmat[1,:] .-(13/32)), marker=:cross, label="n(1)n(x) - <n>")
+    plot!(xaxis, abs.(densitycorrmat[1,:] .-(0)), marker=:cross, label="n(1)n(x) - <0>")
     plot!(xscale=:log10, yscale=:log10)
     titlestring = "Predicted ΔV crit = " * @sprintf("%.3f", vacrit) * "\n(N=$N, t=$t, U=$U, V^{++}=$Vpp, V^{+-}=$Vpm)"
     plot!(title=titlestring)
