@@ -31,7 +31,7 @@ from tenpy.networks.site import SpinHalfFermionSite
 from tenpy.networks.mps import MPS
 from tenpy.algorithms import dmrg as tenpy_dmrg
 
-print(f"TeNPy version: {tenpy.__version__}")
+# print(f"TeNPy version: {tenpy.__version__}")
 
 
 # ─── Model definition ─────────────────────────────────────────────────────────
@@ -41,9 +41,9 @@ class HubbardSpinDepV(CouplingMPOModel):
 
     Model parameters:
         t     : float — NN hopping (default 1.0)
-        U     : float — on-site Hubbard repulsion (default 4.0)
-        Vpp   : float — V^{++} = V^{--}, same-spin NN repulsion (default 0.5)
-        Vpm   : float — V^{+-} = V^{-+}, opposite-spin NN repulsion (default 1.5)
+        U     : float — on-site Hubbard repulsion 
+        Vpp   : float — V^{++} = V^{--}, same-spin NN repulsion 
+        Vpm   : float — V^{+-} = V^{-+}, opposite-spin NN repulsion
                         FM condition: Vpm > Vpp
         mu    : float — chemical potential (default 0.0, half filling)
         bc_MPS    : 'infinite' or 'finite'
@@ -57,9 +57,9 @@ class HubbardSpinDepV(CouplingMPOModel):
 
     def init_terms(self, model_params):
         t   = model_params.get("t",   1.0)
-        U   = model_params.get("U",   4.0)
-        Vpp = model_params.get("Vpp", 0.5)   # V^{++}: same spin
-        Vpm = model_params.get("Vpm", 1.5)   # V^{+-}: opposite spin
+        U   = model_params.get("U", None)
+        Vpp = model_params.get("Vpp", None)   # V^{++}: same spin
+        Vpm = model_params.get("Vpm", None)   # V^{+-}: opposite spin
         mu  = model_params.get("mu",  0.0)
 
         # NN hopping (plus_hc=True adds the Hermitian conjugate automatically)
@@ -74,7 +74,7 @@ class HubbardSpinDepV(CouplingMPOModel):
         self.add_coupling(Vpp, 0, "Nd", 0, "Nd", 1)
 
         # V^{+-}: opposite-spin NN repulsion  (↑↓ and ↓↑)
-        self.add_coupling(Vpm, 0, "Nu",   0, "Nd", 1)
+        self.add_coupling(Vpm, 0, "Nu", 0, "Nd", 1)
         self.add_coupling(Vpm, 0, "Nd", 0, "Nu",   1)
 
         # Chemical potential
@@ -83,7 +83,7 @@ class HubbardSpinDepV(CouplingMPOModel):
 
 
 # ─── iDMRG ───────────────────────────────────────────────────────────────────
-def run_idmrg(t=1.0, U=4.0, Vpp=0.5, Vpm=1.5, chi_max=300, n_sweeps=12,
+def run_idmrg(t=1.0, U=4.0, Vpp=0.5, Vpm=1.5, chi_max=300, n_sweeps=12, max_err=1e-5,
               verbose=True):
     """
     Run iDMRG for HubbardSpinDepV in the thermodynamic limit.
@@ -91,7 +91,6 @@ def run_idmrg(t=1.0, U=4.0, Vpp=0.5, Vpm=1.5, chi_max=300, n_sweeps=12,
     """
     if verbose:
         print("=" * 65)
-        print("iDMRG: Hubbard + spin-dependent NN repulsion (Kun Yang 2004)")
         print(f"  t={t}  U={U}  V^{{++}}={Vpp}  V^{{+-}}={Vpm}")
         print(f"  ΔV = V^{{+-}} - V^{{++}} = {Vpm-Vpp:.3f}  (>0 drives FM)")
         print("=" * 65)
@@ -106,11 +105,14 @@ def run_idmrg(t=1.0, U=4.0, Vpp=0.5, Vpm=1.5, chi_max=300, n_sweeps=12,
     # Half-filling, Sz=0 initial state
     psi = MPS.from_product_state(model.lat.mps_sites(), ["up", "down"] , bc=model.lat.bc_MPS)
 
+    chi_list = {0:chi_max//2, 21: int(3*chi_max/4), 51:chi_max}
     dmrg_params = {
         "trunc_params": {
             "chi_max": chi_max,
             "svd_min": 1e-11,
+            "trunc_cut": 1e-8,
         },
+        "chi_list":chi_list,
         "mixer": "DensityMatrixMixer",
         "mixer_params": {
             "amplitude": 1e-5,
@@ -123,6 +125,8 @@ def run_idmrg(t=1.0, U=4.0, Vpp=0.5, Vpm=1.5, chi_max=300, n_sweeps=12,
         "norm_tol": 1e-6,
         "update_env": 10,
         "start_env": 10,
+        'max_E_err': max_err, #precision in energy 
+        'max_S_err': max_err, #precision in entropy
     }
 
     eng = tenpy_dmrg.TwoSiteDMRGEngine(psi, model, dmrg_params)
@@ -168,12 +172,12 @@ def _report_idmrg(E, psi):
             for j in range(corr.shape[1]):
                 Sq += np.cos(q * (i - j)) * corr[i, j]
         Sq /= L
-        print(f"    q/π = {q_frac:.2f}:  S(q) = {Sq:+.6f}")
+        # print(f"    q/π = {q_frac:.2f}:  S(q) = {Sq:+.6f}")
 
-    if abs(chi_q0) > 5.0:
-        print("\n  >>> Large χ(q=0) — system is near or in the FM phase!")
-    else:
-        print("\n  >>> Paramagnetic ground state at these parameters.")
+    # if abs(chi_q0) > 5.0:
+    #     print("\n  >>> Large χ(q=0) — system is near or in the FM phase!")
+    # else:
+    #     print("\n  >>> Paramagnetic ground state at these parameters.")
 
 
 # ─── Finite DMRG ─────────────────────────────────────────────────────────────
@@ -240,7 +244,7 @@ def run_finite_dmrg(N=20, t=1.0, U=4.0, Vpp=0.5, Vpm=1.5,
 
 # ─── Scan ΔV to locate FM transition ─────────────────────────────────────────
 def scan_deltaV(t=1.0, U=4.0, Vpp=0.5,
-                dV_values=None, chi_max=150, n_sweeps=8):
+                dV_values=None, chi_max=150, n_sweeps=8, max_err=1e-5):
     """
     Fix V^{++} and scan V^{+-} - V^{++} from 0 upward.
     The FM transition is signalled by:
@@ -255,24 +259,42 @@ def scan_deltaV(t=1.0, U=4.0, Vpp=0.5,
     print(f"  t={t}  U={U}  V^{{++}}={Vpp}")
     print("=" * 70)
     print(f"  {'ΔV':>6}  {'V^{+-}':>8}  {'E/N':>14}  {'χ(q=0)':>12}  {'S(q=0)':>10}")
-    print("  " + "-" * 58)
+    print("  " + "-" * 58, flush=True)
+
+    chi_list = {0:chi_max//2, 21: int(3*chi_max/4), 51:chi_max}
+    dmrg_params = {
+        "trunc_params": {
+            "chi_max": chi_max,
+            "svd_min": 1e-11,
+            "trunc_cut": 1e-8,
+        },
+        "chi_list":chi_list,
+        "mixer": "DensityMatrixMixer",
+        "mixer_params": {
+            "amplitude": 1e-5,
+            "decay": 1.5,
+            "disable_after": 60,
+        },
+        "N_sweeps_check": 1,
+        "min_sweeps": 4,
+        "max_sweeps": n_sweeps,
+        "norm_tol": 1e-6,
+        "update_env": 10,
+        "start_env": 10,
+        'max_E_err': max_err, #precision in energy 
+        'max_S_err': max_err, #precision in entropy
+    }
 
     for dV in dV_values:
         Vpm = Vpp + dV
         model_params = dict(
             t=t, U=U, Vpp=Vpp, Vpm=Vpm, mu=0.0,
-            bc_MPS="infinite", L=2, conserve="best",
+            bc_MPS="infinite", L=2,
         )
         model = HubbardSpinDepV(model_params)
         psi = MPS.from_lat_product_state(model.lat, ["up", "down"])
 
-        dmrg_params = {
-            "trunc_params": {"chi_max": chi_max, "svd_min": 1e-10},
-            "mixer": "DensityMatrixMixer",
-            "mixer_params": {"amplitude": 1e-5, "decay": 1.5, "disable_after": 30},
-            "N_sweeps_check": 1, "min_sweeps": 3, "max_sweeps": n_sweeps,
-            "norm_tol": 1e-5, "update_env": 5, "start_env": 5,
-        }
+
         eng = tenpy_dmrg.TwoSiteDMRGEngine(psi, model, dmrg_params)
         E, psi = eng.run()
 
@@ -302,11 +324,12 @@ if __name__ == "__main__":
     parser.add_argument("--chi",    type=int,   default=300,
                         help="max bond dimension")
     parser.add_argument("--sweeps", type=int,   default=12)
+    parser.add_argument("--max_err", type=float, default=1e-5)
     args = parser.parse_args()
 
     if args.mode == "idmrg":
         run_idmrg(t=args.t, U=args.U, Vpp=args.Vpp, Vpm=args.Vpm,
-                  chi_max=args.chi, n_sweeps=args.sweeps)
+                  chi_max=args.chi, n_sweeps=args.sweeps, max_err=args.max_err)
 
     elif args.mode == "finite":
         run_finite_dmrg(N=args.N, t=args.t, U=args.U, Vpp=args.Vpp, Vpm=args.Vpm,
@@ -314,4 +337,4 @@ if __name__ == "__main__":
 
     elif args.mode == "scan":
         scan_deltaV(t=args.t, U=args.U, Vpp=args.Vpp,
-                    chi_max=args.chi, n_sweeps=args.sweeps)
+                    chi_max=args.chi, n_sweeps=args.sweeps, max_err=args.max_err)
