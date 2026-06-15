@@ -33,3 +33,7 @@ function entanglement_profile(psi)
         @printf("  bond %2d–%2d:  S = %.4f  %s\n", b, b+1, s, bar)
     end
 end
+
+function ret_maxlinkdim(psi)
+  return maximum([linkdim(psi, i) for i in 1:length(psi)-1])
+end

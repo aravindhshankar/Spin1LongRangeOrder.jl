@@ -268,7 +268,7 @@ function scan_deltaV(N=16, t=1.0, U=4.0, Vpp=0.5;
   p = plot(dV_range, Sq0list, marker=:circle, xlabel="ΔV = V^{+-} - V^{++}", ylabel="S(q=0)", title=titlestring, legend=false)
   plot!(dV_range, magzlist, marker=:cross, legend=false)
   display(p)
-  savefig(p, "pngfigs/plot_Sq0_vs_dV_N$N" * "_U$U" * "_Vpp" * @sprintf("%.3f", Vpp) * ".png")
+  savefig(p, "pngfigs/Sq0_vs_dV_N$N" * "_U$U" * "_Vpp" * @sprintf("%.3f", Vpp) * ".png")
 end
 
 # ─── Main ────────────────────────────────────────────────────────────────────
@@ -355,7 +355,7 @@ function scanmain()
     # Vpplist = (-2.0, -1.0, 0.1, 0.2, 0.5, 0.8, 1.0, 1.2, 1.5, 2.0, 5.0, 7.0)
     Vpplist = (1.0)
     for Vpp in Vpplist
-        scan_deltaV(N, t, U, Vpp; dV_range=2.0:0.1:2.8, Npart=13)
+        scan_deltaV(N, t, U, Vpp; dV_range=2.0:0.1:2.4, Npart=14)
     end #for
 end
 
