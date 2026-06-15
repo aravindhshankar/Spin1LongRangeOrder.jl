@@ -228,7 +228,7 @@ end
 
 # ─── Scan ΔV = V^{+-} - V^{++} to locate the FM transition ──────────────────
 function scan_deltaV(N=16, t=1.0, U=4.0, Vpp=0.5;
-  dV_range=0.0:0.25:2.0)
+  dV_range=0.0:0.25:2.0, Npart=nothing)
   println("\n", "="^65)
   println("Scanning ΔV = V^{+-} - V^{++} to locate FM transition")
   @printf("  N=%d  t=%.2f  U=%.2f  V^{++}=%.2f\n", N, t, U, Vpp)
@@ -238,8 +238,13 @@ function scan_deltaV(N=16, t=1.0, U=4.0, Vpp=0.5;
   println("  ", "-"^62)
   vacrit = (0.5 * U) - pi * abs(t)  #approximate value from bosonization
   @show vacrit
-  sites = siteinds("Electron", N; conserve_nf=false, conserve_sz=false)
-  psi = initial_mps(sites, Npart=N)
+  if isnothing(Npart)
+    sites = siteinds("Electron", N; conserve_nf=false, conserve_sz=false)
+    psi = initial_mps(sites, Npart=N)
+  else
+    sites = siteinds("Electron", N; conserve_nf=true, conserve_sz=false) #conserve particle number
+    psi = initial_mps(sites, Npart=Npart)
+  end
   Sq0list = Float64[]
   magzlist = Float64[]
 
@@ -257,6 +262,9 @@ function scan_deltaV(N=16, t=1.0, U=4.0, Vpp=0.5;
   end
   # Plot S(q=0) vs ΔV:
   titlestring = "Predicted ΔV crit = " * @sprintf("%.3f", vacrit) * "\n(N=$N, t=$t, U=$U, V^{++}=$Vpp)"
+  if !isnothing(Npart)
+    titlestring = titlestring * " Npart=$Npart"
+  end
   p = plot(dV_range, Sq0list, marker=:circle, xlabel="ΔV = V^{+-} - V^{++}", ylabel="S(q=0)", title=titlestring, legend=false)
   plot!(dV_range, magzlist, marker=:cross, legend=false)
   display(p)
@@ -335,8 +343,26 @@ function main()
   # Uncomment to scan the FM transition:
   # scan_deltaV(N, t, U, Vpp; dV_range=0.0:0.1:5.0)
 end
+
+
+function scanmain()
+    N   = 32
+    t   = 1.0
+    # idx = Base.parse(Int, ENV["SLURM_ARRAY_TASK_ID"])
+    idx = 4
+    Ulist = (0.1, 0.3, 0.5, 1.0, 3.0, 7.0) 
+    U = Ulist[idx]
+    # Vpplist = (-2.0, -1.0, 0.1, 0.2, 0.5, 0.8, 1.0, 1.2, 1.5, 2.0, 5.0, 7.0)
+    Vpplist = (1.0)
+    for Vpp in Vpplist
+        scan_deltaV(N, t, U, Vpp; dV_range=2.0:0.1:2.8, Npart=13)
+    end #for
+end
+
 ## 
 #main()
+
+scanmain()
 
 ##
 # let 
