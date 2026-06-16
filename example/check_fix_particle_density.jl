@@ -14,7 +14,7 @@ gr()
 #   i.e. Vpm > Vpp drives the ferromagnetic transition.
 #-------------------------------------------------------------------------------
 
-
+##
 # ─── Sweep schedule ───────────────────────────────────────────────────────────
 function make_sweeps(max_sweeps=50)
   # Each entry: (maxdim, cutoff, noise)
@@ -33,25 +33,25 @@ function make_sweeps(max_sweeps=50)
 end
 
 function make_sweeps(max_sweeps=50, init_dim=10)
+  valmax = 400
   base = [
     ("maxdim", "cutoff", "noise"),
     fill((20, 1e-12, 1e-6), 2)...,
     fill((50, 1e-8, 1e-6), 4)...,
     fill((100, 1e-10, 1e-8), 5)...,
     fill((200, 1e-12, 0.0), 10)...,
-    (400, 1e-10, 0.0),
+    (valmax, 1e-10, 0.0),
   ]
-  # idx = findlast(x -> init_dim > x[1], base[2:end])
-  # val = nothing
-  # if !isnothing(idx)
-  #   val = base[2:end][idx][1]
-  #   deleteat!(base, 2:idx+1)
-  # end
-  deleteat!(base, 1 .+ findall(x -> init_dim >= x[1], base[2:end]))
+  idx = findlast(x -> init_dim > x[1], base[2:end])
+  val = nothing
+  if !isnothing(idx)
+    val = base[2:end][idx][1]
+    val == valmax ? deleteat!(base, 2:idx) : deleteat!(base, 2:idx+1)
+  end
   sw = Sweeps(max_sweeps, stack(base, dims=1))
   return sw
 end
-
+##
 # ─── Early-stopping observer ──────────────────────────────────────────────────
 # Halts DMRG when |ΔE| < energy_tol for one full sweep, after min_sweeps.
 mutable struct EnergyObserver <: AbstractObserver
