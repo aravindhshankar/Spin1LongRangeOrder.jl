@@ -11,6 +11,7 @@
 #SBATCH --time=23:00:00
 #SBATCH --output=logs/%x_%j.out
 
+mkdir -p logs
 
 module load python/3.11.9 #check what the module is on argo
 export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
