@@ -30,6 +30,9 @@ from tenpy.models.model import CouplingMPOModel
 from tenpy.networks.site import SpinHalfFermionSite
 from tenpy.networks.mps import MPS
 from tenpy.algorithms import dmrg as tenpy_dmrg
+import sys
+sys.path.append('..')
+import utils.io
 
 # print(f"TeNPy version: {tenpy.__version__}")
 
@@ -243,7 +246,7 @@ def run_finite_dmrg(N=20, t=1.0, U=4.0, Vpp=0.5, Vpm=1.5,
 
 # ─── Scan ΔV to locate FM transition ─────────────────────────────────────────
 def scan_deltaV(t=1.0, U=4.0, Vpp=0.5,
-                dV_values=None, chi_max=150, n_sweeps=8, max_err=1e-5):
+                dV_values=None, chi_max=100, n_sweeps=8, max_err=1e-5):
     """
     Fix V^{++} and scan V^{+-} - V^{++} from 0 upward.
     The FM transition is signalled by:
@@ -303,10 +306,13 @@ def scan_deltaV(t=1.0, U=4.0, Vpp=0.5,
         Sz    = psi.expectation_value("Sz")
         L     = len(Sz)
         Sq0   = float(np.sum(corr)) / L
+        xi    = psi.correlation_length()
 
         # dmrg_params['start_env'] = 0 #the environment is already built, no need to waste time rebuilding it # don't risk it, maybe set like 2 in the future
 
-        print(f"  {dV:6.3f}  {Vpm:8.3f}  {E:14.8f}  {chi:12.4f}  {Sq0:10.4f}")
+        print(f"  {dV:6.3f}  {Vpm:8.3f}  {E:14.8f}  {chi:12.4f}  {Sq0:10.4f}, {xi:10.4f}")
+
+    
 
 
 # ─── CLI ─────────────────────────────────────────────────────────────────────
