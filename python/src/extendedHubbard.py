@@ -117,14 +117,14 @@ def run_idmrg(t=1.0, U=4.0, Vpp=0.5, Vpm=1.5, chi_max=300, n_sweeps=12, max_err=
         "mixer_params": {
             "amplitude": 1e-5,
             "decay": 1.5,
-            "disable_after": 60,
+            "disable_after": 30,
         },
         "N_sweeps_check": 1,
         "min_sweeps": 4,
         "max_sweeps": n_sweeps,
         "norm_tol": 1e-6,
         "update_env": 10,
-        "start_env": 10,
+        # "start_env": 10,
         'max_E_err': max_err, #precision in energy 
         'max_S_err': max_err, #precision in entropy
     }
@@ -272,18 +272,19 @@ def scan_deltaV(t=1.0, U=4.0, Vpp=0.5,
         "mixer": "DensityMatrixMixer",
         "mixer_params": {
             "amplitude": 1e-5,
-            "decay": 1.5,
-            "disable_after": 60,
+            "decay": 1.2,
+            "disable_after": 30,
         },
-        "N_sweeps_check": 1,
+        # "N_sweeps_check": 1,
         "min_sweeps": 4,
         "max_sweeps": n_sweeps,
         "norm_tol": 1e-6,
         "update_env": 10,
-        "start_env": 10,
+        # "start_env": 10,
         'max_E_err': max_err, #precision in energy 
         'max_S_err': max_err, #precision in entropy
     }
+    psi = None #first run keep psi None to init engine etc
 
     for dV in dV_values:
         Vpm = Vpp + dV
@@ -292,10 +293,11 @@ def scan_deltaV(t=1.0, U=4.0, Vpp=0.5,
             bc_MPS="infinite", L=2,
         )
         model = HubbardSpinDepV(model_params)
-        psi = MPS.from_lat_product_state(model.lat, ["up", "down"])
-
-
-        eng = tenpy_dmrg.TwoSiteDMRGEngine(psi, model, dmrg_params)
+        if psi is None:
+            psi = MPS.from_lat_product_state(model.lat, ["up", "down"])
+            eng = tenpy_dmrg.TwoSiteDMRGEngine(psi, model, dmrg_params)
+        else:
+            eng.init_env(model=model)
         E, psi = eng.run()
 
         corr  = psi.correlation_function("Sz", "Sz")
@@ -303,6 +305,8 @@ def scan_deltaV(t=1.0, U=4.0, Vpp=0.5,
         Sz    = psi.expectation_value("Sz")
         L     = len(Sz)
         Sq0   = float(np.sum(corr)) / L
+
+        # dmrg_params['start_env'] = 0 #the environment is already built, no need to waste time rebuilding it # don't risk it, maybe set like 2 in the future
 
         print(f"  {dV:6.3f}  {Vpm:8.3f}  {E:14.8f}  {chi:12.4f}  {Sq0:10.4f}")
 

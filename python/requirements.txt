@@ -3,3 +3,4 @@ scipy
 matplotlib
 physics-tenpy
 pandas
+h5py

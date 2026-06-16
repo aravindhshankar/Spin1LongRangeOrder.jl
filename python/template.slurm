@@ -12,8 +12,10 @@
 
 module load mkl
 module load intel
-moduel load python #check what the module is on argo
+module load python #check what the module is on argo
 
+# export MKL_NUM_THREADS=4 
+export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
 
 source .venv/bin/activate #make venv first
 python scanner.py
