@@ -86,7 +86,7 @@ class HubbardSpinDepV(CouplingMPOModel):
 
 
 # ─── iDMRG ───────────────────────────────────────────────────────────────────
-def run_idmrg(t=1.0, U=4.0, Vpp=0.5, Vpm=1.5, chi_max=300, n_sweeps=12, max_err=1e-5,
+def run_idmrg(t=1.0, U=4.0, Vpp=0.5, Vpm=1.5, chi_max=100, n_sweeps=12, max_err=1e-5,
               verbose=True):
     """
     Run iDMRG for HubbardSpinDepV in the thermodynamic limit.
@@ -135,9 +135,17 @@ def run_idmrg(t=1.0, U=4.0, Vpp=0.5, Vpm=1.5, chi_max=300, n_sweeps=12, max_err=
     E, psi = eng.run()   # E is energy per site for iDMRG
 
     if verbose:
-        _report_idmrg(E, psi)
+        results                 = _report_idmrg(E, psi)
+        results["model_params"] = model_params
+        results["dmrg_params"]  = dmrg_params
 
-    return E, psi, model
+    else:
+        results = {
+            "model_params" : model_params, 
+            "dmrg_params"  : dmrg_params,
+        }
+
+    return E, psi, model, results
 
 
 def _report_idmrg(E, psi):
@@ -164,22 +172,29 @@ def _report_idmrg(E, psi):
     chi_q0 = float(np.sum(corr[0, :]))
     print(f"\n  Spin susceptibility (q=0 sum): χ ≈ {chi_q0:.4f}")
 
+    results = {
+        "mean_Sz" : mean_Sz, 
+        "mean_fill" : mean_fill,
+        "chi_q0" : chi_q0,
+    }
     # Spin structure factor S(q)
-    L = len(Sz)
-    print("\n  Spin structure factor S(q) [from unit-cell correlations]:")
-    for q_frac in [0.0, 0.25, 0.5, 0.75, 1.0]:
-        q = q_frac * np.pi
-        Sq = 0.0
-        for i in range(L):
-            for j in range(corr.shape[1]):
-                Sq += np.cos(q * (i - j)) * corr[i, j]
-        Sq /= L
-        # print(f"    q/π = {q_frac:.2f}:  S(q) = {Sq:+.6f}")
-
+    # L = len(Sz)
+    # print("\n  Spin structure factor S(q) [from unit-cell correlations]:")
+    # for q_frac in [0.0, 0.25, 0.5, 0.75, 1.0]:
+    #     q = q_frac * np.pi
+    #     Sq = 0.0
+    #     for i in range(L):
+    #         for j in range(corr.shape[1]):
+    #             Sq += np.cos(q * (i - j)) * corr[i, j]
+    #     Sq /= L
+    # print(f"    q/π = {q_frac:.2f}:  S(q) = {Sq:+.6f}")
     # if abs(chi_q0) > 5.0:
     #     print("\n  >>> Large χ(q=0) — system is near or in the FM phase!")
     # else:
     #     print("\n  >>> Paramagnetic ground state at these parameters.")
+
+    return results
+
 
 
 # ─── Finite DMRG ─────────────────────────────────────────────────────────────
