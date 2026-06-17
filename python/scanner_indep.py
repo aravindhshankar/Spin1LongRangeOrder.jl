@@ -19,7 +19,7 @@ n_tasks = int(os.getenv("SLURM_ARRAY_TASK_COUNT", 1))
 
 arr_for_task  = ret_arr_for_taskid(Vpmlist, n_tasks, task_id)
 
-ROOTDIR = '/../data/iDMRG/'
+ROOTDIR = '../data/iDMRG/'
 if not os.path.exists(ROOTDIR):
     print("MADE ROOTDIR : ", ROOTDIR)
     os.makedirs(ROOTDIR, exist_ok=True)
