@@ -15,11 +15,11 @@ function make_sweeps(max_sweeps=50)
     # The schedule has 50 rows; bond dim and noise saturate after row 6.
     base = [
         ("maxdim", "cutoff", "noise"),  
-        fill((20,   1e-6,  1e-4), 2)...,
-        fill((50,   1e-8,  1e-6), 3)...,
-        fill((100,  1e-10, 0.0), 5)...,
+        fill((20,   1e-6,  1e-3), 2)...,
+        fill((50,   1e-8,  1e-4), 3)...,
+        fill((100,  1e-10, 1e-5), 5)...,
         fill((200,  1e-12,  0.0), 10)...,
-        (400,  1e-10, 0.0),
+        (400,  1e-12, 0.0),
         # (500,  1e-12, 0.0),
     ]
     sw = Sweeps(max_sweeps, stack(base, dims=1))
@@ -116,7 +116,7 @@ function run_dmrg(N, t, U, Vpp, Vpm; sites=nothing, initial_psi=nothing, verbose
     psi0  = isnothing(initial_psi) ? initial_mps(sites) : initial_psi
     sw    = make_sweeps(100)
 
-    obs    = EnergyObserver(energy_tol=1e-5, min_sweeps=10)
+    obs    = EnergyObserver(energy_tol=1e-8, min_sweeps=25)
     eigsolve_krylovdim = 10
     @time E, psi = dmrg(H, psi0, sw; eigsolve_krylovdim, outputlevel=verbose ? 1 : 0, observer=obs)
     var =   variance_gs(H, psi)
@@ -204,6 +204,8 @@ function scan_deltaV(N=16, t=1.0, U=4.0, Vpp=0.5;
     psi = initial_mps(sites, Npart=N) 
     Sq0list = Float64[]
     magzlist = Float64[]
+    datasavedir = "data/Hubbard/N$N/"
+    mkpath(datasavedir)
 
     for dV in dV_range
         Vpm          = Vpp + dV
@@ -212,10 +214,18 @@ function scan_deltaV(N=16, t=1.0, U=4.0, Vpp=0.5;
         SzSz         = correlation_matrix(psi, "Sz", "Sz")
         Sq0          = sum(SzSz) / N
         total_Sz     = abs(sum(Sz))
+        total_szbyN = total_Sz / N
+        max_linkdim_psi = ret_maxlinkdim(psi)
         push!(Sq0list, Sq0)
         push!(magzlist, total_Sz/N)
         @printf("  %8.3f  %14.8f  %12.8f  %12.6f  %10.4f\n",
                 dV, E, E/N, total_Sz, Sq0)
+        @show max_linkdim_psi
+        datafilename = datasavedir * "N$N" * "_U" * @sprintf("%.3f", U) * "_Vpp" * @sprintf("%.3f", Vpp) * "_Vpm" * @sprintf("%.3f", Vpm) * raw".h5"
+        hamparams = (t=t, U=U, Vpp=Vpp, Vpm=Vpm, dV=dV, totalSz=total_szbyN, Sqzero=Sq0, maxlinkdim=max_linkdim_psi, conserve=0)
+    
+        save_simulation(datafilename, psi, Dict(pairs(hamparams)))
+        flush(stdout)
     end
     # Plot S(q=0) vs ΔV:
     titlestring = "Predicted ΔV crit = " * @sprintf("%.3f", vacrit) * "\n(N=$N, t=$t, U=$U, V^{++}=$Vpp)"
@@ -236,9 +246,11 @@ function main()
     # idx = 1
     Ulist = (0.1, 0.3, 0.5, 1.0, 3.0, 7.0) 
     U = Ulist[idx]
-    Vpplist = (-2.0, -1.0, 0.1, 0.2, 0.5, 0.8, 1.0, 1.2, 1.5, 2.0, 5.0, 7.0)
+    # Vpplist = (-2.0, -1.0, 0.1, 0.2, 0.5, 0.8, 1.0, 1.2, 1.5, 2.0, 5.0, 7.0)
+    Vpplist = (0.8, )
     for Vpp in Vpplist
-        scan_deltaV(N, t, U, Vpp; dV_range=0.0:0.1:3.5)
+        # scan_deltaV(N, t, U, Vpp; dV_range=0.0:0.1:3.5)
+        scan_deltaV(N, t, U, Vpp; dV_range=3.1:0.01:3.3)
     end #for
 end
 ## 
