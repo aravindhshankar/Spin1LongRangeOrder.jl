@@ -133,16 +133,23 @@ def run_idmrg(t=1.0, U=4.0, Vpp=0.5, Vpm=1.5, chi_max=100, n_sweeps=12, max_err=
 
     eng = tenpy_dmrg.TwoSiteDMRGEngine(psi, model, dmrg_params)
     E, psi = eng.run()   # E is energy per site for iDMRG
+    total_sweeps = eng.sweeps
+    converged = eng.is_converged()
+
+    if not converged and total_sweeps >= eng.options['max_sweeps']:
+        print(f"Halted at maximum sweeps limit ({total_sweeps}) without fully converging.")
 
     if verbose:
         results                 = _report_idmrg(E, psi)
         results["model_params"] = model_params
         results["dmrg_params"]  = dmrg_params
+        results["converged"]    = converged
 
     else:
         results = {
             "model_params" : model_params, 
             "dmrg_params"  : dmrg_params,
+            "converged"    : converged,
         }
 
     return E, psi, model, results
