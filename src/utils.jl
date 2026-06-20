@@ -37,3 +37,13 @@ end
 function ret_maxlinkdim(psi)
   return maximum([linkdim(psi, i) for i in 1:length(psi)-1])
 end
+
+""" to divide serially an array for an array job in slurm, use get_chunk(arr, SLURM_ARRAY_TASK_ID, SLURM_ARRAY_TASK_COUNT)"""
+function get_chunk(arr, task_id, n_chunks)
+    n = length(arr)
+
+    start_idx = fld((task_id - 1) * n, n_chunks) + 1
+    end_idx   = fld(task_id * n, n_chunks)
+
+    return arr[start_idx:end_idx]
+end
