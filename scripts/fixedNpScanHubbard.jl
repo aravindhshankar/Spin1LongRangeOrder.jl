@@ -114,7 +114,7 @@ function run_dmrg(N, t, U, Vpp, Vpm; sites=nothing, initial_psi=nothing, verbose
     # sites = siteinds("Electron", N; conserve_qns=true)
     H     = build_hamiltonian(sites, t, U, Vpp, Vpm)
     psi0  = isnothing(initial_psi) ? initial_mps(sites) : initial_psi
-    sw    = make_sweeps(100)
+    sw    = make_sweeps(150)
 
     obs    = EnergyObserver(energy_tol=1e-8, min_sweeps=25)
     eigsolve_krylovdim = 10
@@ -126,7 +126,7 @@ function run_dmrg(N, t, U, Vpp, Vpm; sites=nothing, initial_psi=nothing, verbose
     # @show number_profile
     total_N = sum(number_profile)
     @printf("%.4f  (expected %d)\n", total_N, N)
-    return E, psi, sites
+    return E, psi, sites, var
 end
 
 # ─── Observables ─────────────────────────────────────────────────────────────
@@ -210,21 +210,21 @@ function scan_deltaV(N=16, t=1.0, U=4.0, Vpp=0.5, Npart=7;
     mkpath(datasavedir)
 
     for dV in dV_range
-        Vpm          = Vpp + dV
-        E, psi, _   = run_dmrg(N, t, U, Vpp, Vpm; sites=sites, initial_psi=psi, verbose=false)
-        Sz           = expect(psi, "Sz")
-        SzSz         = correlation_matrix(psi, "Sz", "Sz")
-        Sq0          = sum(SzSz) / N
-        total_Sz     = abs(sum(Sz))
-        total_szbyN = total_Sz / N
-        max_linkdim_psi = ret_maxlinkdim(psi)
+        Vpm              = Vpp + dV
+        E, psi, _, var   = run_dmrg(N, t, U, Vpp, Vpm; sites=sites, initial_psi=psi, verbose=false)
+        Sz               = expect(psi, "Sz")
+        SzSz             = correlation_matrix(psi, "Sz", "Sz")
+        Sq0              = sum(SzSz) / N
+        total_Sz         = abs(sum(Sz))
+        total_szbyN      = total_Sz / N
+        max_linkdim_psi  = ret_maxlinkdim(psi)
         push!(Sq0list, Sq0)
         push!(magzlist, total_Sz/N)
         @printf("  %8.3f  %14.8f  %12.8f  %12.6f  %10.4f\n",
                 dV, E, E/N, total_Sz, Sq0)
         @show max_linkdim_psi
         datafilename = datasavedir * "N$N" * "_U" * @sprintf("%.3f", U) * "_Vpp" * @sprintf("%.3f", Vpp) * "_Vpm" * @sprintf("%.3f", Vpm) * raw".h5"
-        hamparams = (t=t, U=U, Vpp=Vpp, Vpm=Vpm, dV=dV, totalSz=total_szbyN, Sqzero=Sq0, maxlinkdim=max_linkdim_psi, Npart=Npart, E=E, conserve=Npart)
+        hamparams = (t=t, U=U, Vpp=Vpp, Vpm=Vpm, dV=dV, totalSz=total_szbyN, Sqzero=Sq0, maxlinkdim=max_linkdim_psi, Npart=Npart, E=E, var=var, conserve=Npart)
     
         save_simulation(datafilename, psi, Dict(pairs(hamparams)))
         flush(stdout)
@@ -253,7 +253,7 @@ function main()
     Npart = 7
     for Vpp in Vpplist
         # scan_deltaV(N, t, U, Vpp; dV_range=0.0:0.1:3.5)
-        scan_deltaV(N, t, U, Vpp, Npart; dV_range=3.0:0.01:3.3)
+        scan_deltaV(N, t, U, Vpp, Npart; dV_range=3.3:-0.01:3.0)
     end #for
 end
 ## 
