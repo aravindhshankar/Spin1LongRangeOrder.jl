@@ -206,7 +206,7 @@ function scan_deltaV(N=16, t=1.0, U=4.0, Vpp=0.5, Npart=7;
     psi = initial_mps(sites, Npart=Npart) 
     Sq0list = Float64[]
     magzlist = Float64[]
-    datasavedir = "data/Hubbard/N$N" * "_Np$Npart/"
+    datasavedir = "data/Hubbard/N$N" * "consNf/Np$Npart/"
     mkpath(datasavedir)
 
     for dV in dV_range
@@ -236,7 +236,7 @@ function scan_deltaV(N=16, t=1.0, U=4.0, Vpp=0.5, Npart=7;
     # display(p)
     savedir = "pngfigs/Hubbard/N$N" * "_Np$Npart/"
     mkpath(savedir) #tested that it works
-    savefilename = savedir * "Sq0_vs_dV_N$N"*"Npart$Npart"*"_U"*@sprintf("%.3f", U)*"_Vpp" * @sprintf("%.3f", Vpp) * ".png"
+    savefilename = savedir * "scan$N"*"Npart$Npart"*"_U"*@sprintf("%.3f", U)*"_Vpp" * @sprintf("%.3f", Vpp) * ".png"
     savefig(p, savefilename)
 end
 
@@ -245,19 +245,18 @@ function main()
     N   = 16
     t   = 1.0
     idx = Base.parse(Int, ENV["SLURM_ARRAY_TASK_ID"])
+    total_tasks = Base.parse(Int, ENV["SLURM_ARRAY_TASK_COUNT"]) # assumes 1-based indexing
     # idx = 1
-    Ulist = (0.1, 0.3, 0.5, 1.0, 3.0, 7.0) 
-    U = Ulist[idx]
-    # Vpplist = (-2.0, -1.0, 0.1, 0.2, 0.5, 0.8, 1.0, 1.2, 1.5, 2.0, 5.0, 7.0)
-    Vpplist = (0.8, )
-    Npart = 7
-    for Vpp in Vpplist
-        # scan_deltaV(N, t, U, Vpp; dV_range=0.0:0.1:3.5)
-        scan_deltaV(N, t, U, Vpp, Npart; dV_range=3.3:-0.01:3.0)
+    U = 0.1
+    Vpp = 0.8
+    Npartlist = 5:30
+    this_job_nparts = get_chunk(Npartlist, idx, total_tasks)
+    for Npart in this_job_nparts
+        scan_deltaV(N, t, U, Vpp, Npart; dV_range=0.0:0.1:5.0)
+        # scan_deltaV(N, t, U, Vpp, Npart; dV_range=3.3:-0.01:3.0)
     end #for
 end
 ## 
 let 
     main()
 end
-

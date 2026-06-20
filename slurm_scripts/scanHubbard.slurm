@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-#SBATCH --job-name=scanHubbard
+#SBATCH --job-name=fixedN_scanHubbard
 #SBATCH --partition=cmsp,long
 #SBATCH --array=1-6
 #SBATCH --nodes=1

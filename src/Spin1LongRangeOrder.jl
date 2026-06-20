@@ -14,5 +14,5 @@ export save_simulation, load_simulation, mps_equal, mps_tensor_equal, replace_si
 export LoadmpsPlotCorr
 export variance_gs
 export entanglement_entropy, entanglement_profile
-export ret_maxlinkdim
+export ret_maxlinkdim, get_chunk
 end
