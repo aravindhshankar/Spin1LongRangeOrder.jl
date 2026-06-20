@@ -5,11 +5,11 @@ gr()
 let
   N = 50
   sites = siteinds("S=1/2", N)
-  h = 0.4
+  h = 0.0
   J = -1.0 # - for FM, + for AFM
 
-  jop = "Sz"
-  hop = "Sx"
+  jop = "Sx"
+  hop = "Sz"
   os = OpSum()
   for j = 1:N-1
     os += 4 * J, jop, j, jop, j + 1

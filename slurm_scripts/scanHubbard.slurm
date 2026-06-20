@@ -8,7 +8,7 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=6
 #SBATCH --mem=10G
-#SBATCH --time=20:00:00
+#SBATCH --time=23:00:00
 #SBATCH --output=logs/%x_%j.out
 #SBATCH --mail-user=ashankar@ictp.it
 #SBATCH --mail-type=ALL
@@ -31,6 +31,7 @@ echo "Number of CPUs = ${SLURM_CPUS_PER_TASK}"
 #should submit from slurm_scripts directory
 cd ..
 echo "Should now be in root directory : $(pwd)"
-julia --project=. scripts/scanFmHubbard.jl
+# julia --project=. scripts/scanFmHubbard.jl
+julia --project=. scripts/fixedNpScanHubbard.jl
 
 echo "FINISHED, exiting slurm"
