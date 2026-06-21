@@ -206,7 +206,7 @@ function scan_deltaV(N=16, t=1.0, U=4.0, Vpp=0.5, Npart=7;
     psi = initial_mps(sites, Npart=Npart) 
     Sq0list = Float64[]
     magzlist = Float64[]
-    datasavedir = "data/Hubbard/N$N" * "consNf/Np$Npart/"
+    datasavedir = "data/Hubbard/N$N" * "consNf/"
     mkpath(datasavedir)
 
     for dV in dV_range
@@ -223,7 +223,7 @@ function scan_deltaV(N=16, t=1.0, U=4.0, Vpp=0.5, Npart=7;
         @printf("  %8.3f  %14.8f  %12.8f  %12.6f  %10.4f\n",
                 dV, E, E/N, total_Sz, Sq0)
         @show max_linkdim_psi
-        datafilename = datasavedir * "N$N" * "_U" * @sprintf("%.3f", U) * "_Vpp" * @sprintf("%.3f", Vpp) * "_Vpm" * @sprintf("%.3f", Vpm) * raw".h5"
+        datafilename = datasavedir * "N$N" * "_U" * @sprintf("%.3f", U) * "_Vpp" * @sprintf("%.3f", Vpp) * "_Vpm" * @sprintf("%.3f", Vpm) * "_Np$Npart" * raw".h5"
         hamparams = (t=t, U=U, Vpp=Vpp, Vpm=Vpm, dV=dV, totalSz=total_szbyN, Sqzero=Sq0, maxlinkdim=max_linkdim_psi, Npart=Npart, E=E, var=var, conserve=Npart)
     
         save_simulation(datafilename, psi, Dict(pairs(hamparams)))
@@ -234,7 +234,7 @@ function scan_deltaV(N=16, t=1.0, U=4.0, Vpp=0.5, Npart=7;
     p = plot(dV_range, Sq0list, marker=:circle, xlabel="ΔV = V^{+-} - V^{++}", ylabel="S(q=0)", title=titlestring, legend=false)
     plot!(dV_range, magzlist, marker=:cross,legend=false)
     # display(p)
-    savedir = "pngfigs/Hubbard/N$N" * "_Np$Npart/"
+    savedir = "pngfigs/Hubbard/N$N" * "fixed/"
     mkpath(savedir) #tested that it works
     savefilename = savedir * "scan$N"*"Npart$Npart"*"_U"*@sprintf("%.3f", U)*"_Vpp" * @sprintf("%.3f", Vpp) * ".png"
     savefig(p, savefilename)
