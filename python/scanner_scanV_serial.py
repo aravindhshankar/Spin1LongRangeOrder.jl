@@ -12,7 +12,14 @@ t = 1.0
 U = 0.1
 Vpp = 0.8
 dVlist = np.arange(3.0, 4.1, 0.1)
+vals = np.concatenate([
+    np.arange(3.0, 3.4, 0.1),          # up to 3.3
+    np.arange(3.4, 3.6, 0.01),         # 3.40 ... 3.59
+    np.arange(3.6, 5.0 + 0.1, 0.1),    # 3.6 ... 5.0
+])
 
+vals = np.unique(np.round(vals, 2))
+dVlist = vals
 
 # task_id = int(os.getenv("SLURM_ARRAY_TASK_ID", 0))
 # n_tasks = int(os.getenv("SLURM_ARRAY_TASK_COUNT", 1))

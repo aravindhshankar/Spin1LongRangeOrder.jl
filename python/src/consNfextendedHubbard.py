@@ -359,10 +359,10 @@ def scan_deltaV(t=1.0, U=0.1, Vpp=0.8,
             io.save_mps_with_metadata(savefilename, psi, results)
 
 
-        if converged:
-            dmrg_params['start_env'] = 0 #the environment is already built, no need to waste time rebuilding it # don't risk it, maybe set like 2 in the future
-        else: 
-            dmrg_params['start_env'] = 10
+        # if converged:
+        #     dmrg_params['start_env'] = 0 #the environment is already built, no need to waste time rebuilding it # don't risk it, maybe set like 2 in the future
+        # else: 
+        #     dmrg_params['start_env'] = 10
         print(f"  {dV:6.3f}  {Vpm:8.3f}  {E:14.8f}  {chi:12.4f}  {Sq0:10.4f}, {xi:10.4f}")
 
     
