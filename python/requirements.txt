@@ -1,6 +1,6 @@
 numpy 
 scipy
 matplotlib
-physics-tenpy
+physics-tenpy==1.1.0
 pandas
-h5py
+h5py==3.14.0
