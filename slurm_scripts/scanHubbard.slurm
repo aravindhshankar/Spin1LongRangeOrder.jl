@@ -2,7 +2,7 @@
 #
 #SBATCH --job-name=fixedN_scanHubbard
 #SBATCH --partition=cmsp,long
-# SBATCH --array=1-6
+#SBATCH --array=1-2
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --ntasks=1

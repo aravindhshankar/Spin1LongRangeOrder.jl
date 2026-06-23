@@ -259,11 +259,12 @@ end
 
 # ─── Main ────────────────────────────────────────────────────────────────────
 function main()
-    N   = 64
-    t   = 1.0
-    # idx = Base.parse(Int, ENV["SLURM_ARRAY_TASK_ID"])
+    Nlist = (64, 128, 256)
+    idx = Base.parse(Int, ENV["SLURM_ARRAY_TASK_ID"])
     # total_tasks = Base.parse(Int, ENV["SLURM_ARRAY_TASK_COUNT"]) # assumes 1-based indexing
-    # idx = 1
+    N = Nlist[idx]
+    # N   = 64
+    t   = 1.0
     U = 0.1
     Vpp = 0.8
     # Npartlist = 5:30
