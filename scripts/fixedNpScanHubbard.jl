@@ -19,8 +19,8 @@ function make_sweeps(max_sweeps=50)
         fill((50,   1e-8,  1e-4), 3)...,
         fill((100,  1e-10, 1e-5), 5)...,
         fill((200,  1e-12,  0.0), 10)...,
-        (400,  1e-12, 0.0),
-        # (500,  1e-12, 0.0),
+        fill((400,  1e-12, 0.0), 10)...,
+        (500,  1e-12, 0.0),
     ]
     sw = Sweeps(max_sweeps, stack(base, dims=1))
     return sw
@@ -190,7 +190,7 @@ end
 
 # ─── Scan ΔV = V^{+-} - V^{++} to locate the FM transition ──────────────────
 function scan_deltaV(N=16, t=1.0, U=4.0, Vpp=0.5, Npart=7;
-                     dV_range=0.0:0.25:2.0)
+                     dV_range=0.0:0.25:2.0, startmps=nothing)
     println("\n", "="^65)
     println("Scanning ΔV = V^{+-} - V^{++} to locate FM transition")
     println("Fixed Npart = ", Npart)
@@ -201,9 +201,15 @@ function scan_deltaV(N=16, t=1.0, U=4.0, Vpp=0.5, Npart=7;
     println("  ", "-"^62)
     vacrit = (0.5 * U) - pi * abs(t)  #approximate value from bosonization
     @show vacrit
-    sites = siteinds("Electron", N; conserve_nf=true, conserve_sz=false)
     
-    psi = initial_mps(sites, Npart=Npart) 
+    if isnothing(startmps)
+        psi = initial_mps(sites, Npart=Npart)
+        sites = siteinds("Electron", N; conserve_nf=true, conserve_sz=false)
+    else
+        psi = startmps
+        sites = siteinds(psi)
+    end
+
     Sq0list = Float64[]
     magzlist = Float64[]
     datasavedir = "data/Hubbard/N$N" * "consNf/"
@@ -240,19 +246,47 @@ function scan_deltaV(N=16, t=1.0, U=4.0, Vpp=0.5, Npart=7;
     savefig(p, savefilename)
 end
 
+##
+function filename_builder(N, t, U, Vpp, dV)
+    Vpm = Vpp + dV
+    Npart = Int(N // 2)
+    _ = t # not used, so we discard, but leave the API as is for the future
+    datasavedir = "data/Hubbard/N$N" * "consNf/"
+    datafilename = datasavedir * "N$N" * "_U" * @sprintf("%.3f", U) * "_Vpp" * @sprintf("%.3f", Vpp) * "_Vpm" * @sprintf("%.3f", Vpm) * "_Np$Npart" * raw".h5"
+    return datafilename
+end
+##
+
 # ─── Main ────────────────────────────────────────────────────────────────────
 function main()
-    N   = 16
+    N   = 64
     t   = 1.0
-    idx = Base.parse(Int, ENV["SLURM_ARRAY_TASK_ID"])
-    total_tasks = Base.parse(Int, ENV["SLURM_ARRAY_TASK_COUNT"]) # assumes 1-based indexing
+    # idx = Base.parse(Int, ENV["SLURM_ARRAY_TASK_ID"])
+    # total_tasks = Base.parse(Int, ENV["SLURM_ARRAY_TASK_COUNT"]) # assumes 1-based indexing
     # idx = 1
     U = 0.1
     Vpp = 0.8
-    Npartlist = 5:30
-    this_job_nparts = get_chunk(Npartlist, idx, total_tasks)
+    # Npartlist = 5:30
+    # this_job_nparts = get_chunk(Npartlist, idx, total_tasks)
+    this_job_nparts = (Int(N//2),)
+
+    Vpmreloadict = Dict(((64, 4.500), (128, 4.100), (256, 3.950))) # last available .h5 on disk
+    Vpmreloadval = Vpmreloadict(N)
+    dvreloadval = round(Vpmreloadval - Vpp, digits=3)
+    loadfilename = filename_builder(N, t, U, Vpp, dvreloadval)
+
+    println("-"^20, "loading from file", loadfilename, "-"^20)
+    startmps = load_simulation(loadfilename)
+    println("Load successful! Resuming simulation ...")
+    flush(stdout)
+
+    step = 0.05
+    start_dv_val = dvreloadval + step
+    end_dv_val = 4.2
+    # default dV vals : 3.2:0.05:4.2
+    
     for Npart in this_job_nparts
-        scan_deltaV(N, t, U, Vpp, Npart; dV_range=0.0:0.1:5.0)
+        scan_deltaV(N, t, U, Vpp, Npart; dV_range=start_dv_val:step:end_dv_val, startmps)
         # scan_deltaV(N, t, U, Vpp, Npart; dV_range=3.3:-0.01:3.0)
     end #for
 end

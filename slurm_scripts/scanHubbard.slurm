@@ -2,12 +2,12 @@
 #
 #SBATCH --job-name=fixedN_scanHubbard
 #SBATCH --partition=cmsp,long
-#SBATCH --array=1-6
+# SBATCH --array=1-6
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=6
-#SBATCH --mem=10G
+#SBATCH --mem=20G
 #SBATCH --time=23:00:00
 #SBATCH --output=logs/%x_%j.out
 #SBATCH --mail-user=ashankar@ictp.it
