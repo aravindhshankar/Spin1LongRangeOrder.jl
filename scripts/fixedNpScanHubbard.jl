@@ -272,7 +272,7 @@ function main()
     this_job_nparts = (Int(N//2),)
 
     Vpmreloadict = Dict(((64, 4.500), (128, 4.100), (256, 3.950))) # last available .h5 on disk
-    Vpmreloadval = Vpmreloadict(N)
+    Vpmreloadval = Vpmreloadict[N]
     dvreloadval = round(Vpmreloadval - Vpp, digits=3)
     loadfilename = filename_builder(N, t, U, Vpp, dvreloadval)
 
