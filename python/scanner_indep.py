@@ -1,8 +1,9 @@
 import os
-from src.extendedHubbard import run_idmrg
+# from src.extendedHubbard import run_idmrg
+from src.consNfextendedHubbard import run_idmrg
 import numpy as np
 import logging
-from utils.slurmhelpers import ret_arr_for_taskid
+from utils.slurmhelpers import ret_arr_for_taskid, find_converged_psi
 logging.basicConfig(level=logging.INFO)
 
 import utils.io as io
@@ -32,22 +33,33 @@ if not os.path.exists(ROOTDIR):
     print("MADE ROOTDIR : ", ROOTDIR)
     os.makedirs(ROOTDIR, exist_ok=True)
 
-JOBDIR = os.path.join(ROOTDIR, f"t_{t:.2f}_U_{U:.2f}_Vpp_{Vpp:.3f}")
+chimax = 400
+# JOBDIR = os.path.join(ROOTDIR, f"t_{t:.2f}_U_{U:.2f}_Vpp_{Vpp:.3f}")
+JOBDIR = os.path.join(ROOTDIR, f"v3fwdchi{chimax}/t_{t:.2f}_U_{U:.2f}_Vpp_{Vpp:.3f}_consNf0_25_chimax_{chimax}")
 os.makedirs(JOBDIR, exist_ok=True)
 
-chimax = 100
+mode = 'reload' 
+psi = None
+
+if mode == 'reload':
+    REQ_DATA_LIST = ['v2fwdchi300/t_1.00_U_0.10_Vpp_0.800_consNf0_25_chimax_300/',
+                    #'v2fwdchi200/t_1.00_U_0.10_Vpp_0.800_consNf0_25_chimax_200/',
+                    'v2fwd/t_1.00_U_0.10_Vpp_0.800_consNf0_25_chimax_100/',
+                    ]
+    PATH_TO_REQ_DATA_LIST = [os.path.join(ROOTDIR, REQ_DATA) for REQ_DATA in REQ_DATA_LIST]
+    file_list = [[os.path.join(PATH_TO_REQ_DATA,f) for f in os.listdir(PATH_TO_REQ_DATA) ] for PATH_TO_REQ_DATA in PATH_TO_REQ_DATA_LIST]
+    for thresh in [0.01, 0.05, 0.1, ]:
+        output = find_converged_psi(file_list, 4.9, thresh)
+        try : 
+            psi , _, bestvpm = output 
+            print("best chi =", max(psi.chi))
+            print("Closest Vpm : ", bestvpm, flush=True)
+            break
+        except Exception: 
+            print("NO STARTING PSI FOUND at thresh : ", thresh)
+
+
 for Vpmval in arr_for_task:
     savefilename = os.path.join(JOBDIR, f"Vpm_{Vpmval:.4f}_chimax_{chimax}.h5")
-    _, psi, _, results = run_idmrg(t=t, U=U, Vpp=Vpp, Vpm=Vpmval, chi_max=chimax, n_sweeps=1000, max_err=1e-5, verbose=True)
+    _, psi, _, results = run_idmrg(t=t, U=U, Vpp=Vpp, Vpm=Vpmval, chi_max=chimax, n_sweeps=1000, max_err=1e-7, verbose=True, psi_init=psi)
     io.save_mps_with_metadata(savefilename, psi, results)
-    
-
-print("Loading from file : ", reload_psi_path) if verbose else None
-psi, metadata = io.load_mps_with_metadata(filename=reload_psi_path)
-chi_init = max(psi.chi)
-print(f"Success! Loaded psi with bond dimension {chi_init}", flush=True) if verbose else None
-
-REQ_DATA = 'v2fwd/t_1.00_U_0.10_Vpp_0.800_consNf0_25_chimax_100/'
-PATH_TO_REQ_DATA = os.path.join(ROOTDIR, REQ_DATA)
-savefiletemplate = os.path.join(JOBDIR, f"Vpm_{Vpm:.4f}_chimax_{chi_max}.h5")
-file_list = [os.path.join(PATH_TO_REQ_DATA,f) for f in os.listdir(PATH_TO_REQ_DATA) if "chimax_100" in f]

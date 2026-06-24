@@ -138,6 +138,7 @@ def run_idmrg(t=1.0, U=4.0, Vpp=0.5, Vpm=1.5, chi_max=100, n_sweeps=12, max_err=
             dmrg_params["chi_list"] = None
             dmrg_params["mixer"] = False
             dmrg_params["mixer_params"] = None
+            dmrg_params["start_env"] = 0
 
 
     eng = tenpy_dmrg.TwoSiteDMRGEngine(psi, model, dmrg_params)

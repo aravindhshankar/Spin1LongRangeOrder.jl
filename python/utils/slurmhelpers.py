@@ -1,4 +1,6 @@
 import math
+import re 
+import io as io
 
 def interleaved_indices(n_items, n_tasks):
     """
@@ -40,3 +42,51 @@ def ret_arr_for_taskid(arr, SLURM_ARRAY_TASK_COUNT:int, SLURM_ARRAY_TASK_ID:int)
     my_indices = order[SLURM_ARRAY_TASK_ID::SLURM_ARRAY_TASK_COUNT]
     my_arr = [arr[i] for i in my_indices]
     return my_arr
+
+
+def find_converged_psi(list_of_lists, target_vpm, tolerance=0.05):
+    """
+    Iterates through a list of lists of filenames, parses Vpm from filenames
+    matching the pattern ...Vpm_####_chimax_####.h5, opens files whose Vpm is
+    within `tolerance` of `target_vpm`, and returns the converged result with
+    the closest Vpm value.
+
+    Args:
+        list_of_lists:  A list of lists, each containing filenames.
+        io:             An object with an open() method returning (psi, metadata).
+        target_vpm:     The target Vpm value to search near.
+        tolerance:      Maximum allowed difference from target_vpm (default 0.05).
+
+    Returns:
+        (psi, metadata, vpm) for the converged file with Vpm closest to
+        target_vpm, or None if no converged match is found within tolerance.
+    """
+    pattern = re.compile(r'Vpm_([\d.]+)_chimax_[\d.]+\.h5$')
+
+    best_psi = None
+    best_metadata = None
+    best_vpm = None
+    best_diff = float('inf')
+
+    for file_list in list_of_lists:
+        for filename in file_list:
+            match = pattern.search(filename)
+            if not match:
+                continue
+
+            vpm = float(match.group(1))
+            diff = abs(vpm - target_vpm)
+
+            if diff > tolerance or diff >= best_diff:
+                continue
+
+            psi, metadata = io.load_mps_with_metadata(filename)
+
+            if metadata.get('converged') == True:
+                best_psi = psi
+                best_metadata = metadata
+                best_vpm = vpm
+                best_diff = diff
+
+    return (best_psi, best_metadata, best_vpm) if best_psi is not None else None
+    
