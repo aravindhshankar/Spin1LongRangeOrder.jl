@@ -41,25 +41,26 @@ os.makedirs(JOBDIR, exist_ok=True)
 mode = 'reload' 
 psi = None
 
-if mode == 'reload':
-    REQ_DATA_LIST = ['v2fwdchi300/t_1.00_U_0.10_Vpp_0.800_consNf0_25_chimax_300/',
-                    #'v2fwdchi200/t_1.00_U_0.10_Vpp_0.800_consNf0_25_chimax_200/',
-                    'v2fwd/t_1.00_U_0.10_Vpp_0.800_consNf0_25_chimax_100/',
-                    ]
-    PATH_TO_REQ_DATA_LIST = [os.path.join(ROOTDIR, REQ_DATA) for REQ_DATA in REQ_DATA_LIST]
-    file_list = [[os.path.join(PATH_TO_REQ_DATA,f) for f in os.listdir(PATH_TO_REQ_DATA) ] for PATH_TO_REQ_DATA in PATH_TO_REQ_DATA_LIST]
-    for thresh in [0.01, 0.05, 0.1, ]:
-        output = find_converged_psi(file_list, 4.9, thresh)
-        try : 
-            psi , _, bestvpm = output 
-            print("best chi =", max(psi.chi))
-            print("Closest Vpm : ", bestvpm, flush=True)
-            break
-        except Exception: 
-            print("NO STARTING PSI FOUND at thresh : ", thresh)
+
+REQ_DATA_LIST = ['v2fwdchi300/t_1.00_U_0.10_Vpp_0.800_consNf0_25_chimax_300/',
+                #'v2fwdchi200/t_1.00_U_0.10_Vpp_0.800_consNf0_25_chimax_200/',
+                'v2fwd/t_1.00_U_0.10_Vpp_0.800_consNf0_25_chimax_100/',
+                ]
+PATH_TO_REQ_DATA_LIST = [os.path.join(ROOTDIR, REQ_DATA) for REQ_DATA in REQ_DATA_LIST]
+file_list = [[os.path.join(PATH_TO_REQ_DATA,f) for f in os.listdir(PATH_TO_REQ_DATA) ] for PATH_TO_REQ_DATA in PATH_TO_REQ_DATA_LIST]
 
 
 for Vpmval in arr_for_task:
     savefilename = os.path.join(JOBDIR, f"Vpm_{Vpmval:.4f}_chimax_{chimax}.h5")
+    if mode == 'reload':
+        for thresh in [0.001, 0.01, 0.05, 0.1, ]:
+            output = find_converged_psi(file_list, Vpmval, thresh)
+            try : 
+                psi , _, bestvpm = output 
+                print("best chi =", max(psi.chi))
+                print("Closest Vpm : ", bestvpm, flush=True)
+                break
+            except Exception: 
+                print("NO STARTING PSI FOUND at thresh : ", thresh, flush=True)
     _, psi, _, results = run_idmrg(t=t, U=U, Vpp=Vpp, Vpm=Vpmval, chi_max=chimax, n_sweeps=1000, max_err=1e-7, verbose=True, psi_init=psi)
     io.save_mps_with_metadata(savefilename, psi, results)

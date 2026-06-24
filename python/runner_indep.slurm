@@ -1,14 +1,14 @@
 #!/bin/bash
 #
-#SBATCH --job-name=testIDMRG
+#SBATCH --job-name=resumeiDMRG
 #SBATCH --partition=cmsp,long
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=6
-#SBATCH --array=0-3
+#SBATCH --array=0-6
 #SBATCH --mem=8G
-#SBATCH --time=23:00:00
+#SBATCH --time=23:30:00
 #SBATCH --output=logs/%x_%j.out
 
 mkdir -p logs
