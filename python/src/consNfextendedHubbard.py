@@ -88,7 +88,7 @@ class HubbardSpinDepV(CouplingMPOModel):
 
 # ─── iDMRG ───────────────────────────────────────────────────────────────────
 def run_idmrg(t=1.0, U=4.0, Vpp=0.5, Vpm=1.5, chi_max=100, n_sweeps=12, max_err=1e-5,
-              verbose=True):
+              verbose=True, psi_init=None):
     """
     Run iDMRG for HubbardSpinDepV in the thermodynamic limit.
     Unit cell L=2 (minimum for a non-trivial iMPS at half filling).
@@ -98,17 +98,7 @@ def run_idmrg(t=1.0, U=4.0, Vpp=0.5, Vpm=1.5, chi_max=100, n_sweeps=12, max_err=
         print(f"  t={t}  U={U}  V^{{++}}={Vpp}  V^{{+-}}={Vpm}")
         print(f"  ΔV = V^{{+-}} - V^{{++}} = {Vpm-Vpp:.3f}  (>0 drives FM)")
         print("=" * 65)
-
-    model_params = dict(
-        t=t, U=U, Vpp=Vpp, Vpm=Vpm, mu=0.0,
-        bc_MPS="infinite",
-        L=2, cons_N="N", cons_Sz="None",
-    )
-    model = HubbardSpinDepV(model_params)
-
-    # Half-filling, Sz=0 initial state
-    psi = MPS.from_product_state(model.lat.mps_sites(), ["up", "empty"] , bc=model.lat.bc_MPS)
-
+    
     chi_list = {0:chi_max//2, 21: int(3*chi_max/4), 51:chi_max}
     dmrg_params = {
         "trunc_params": {
@@ -131,6 +121,24 @@ def run_idmrg(t=1.0, U=4.0, Vpp=0.5, Vpm=1.5, chi_max=100, n_sweeps=12, max_err=
         'max_E_err': max_err, #precision in energy 
         'max_S_err': max_err, #precision in entropy
     }
+    model_params = dict(
+        t=t, U=U, Vpp=Vpp, Vpm=Vpm, mu=0.0,
+        bc_MPS="infinite",
+        L=2, cons_N="N", cons_Sz="None",
+    )
+    model = HubbardSpinDepV(model_params)
+
+    if not psi_init:
+        # Quarter-filling, Sz=N/2 initial state
+        psi = MPS.from_product_state(model.lat.mps_sites(), ["up", "empty"] , bc=model.lat.bc_MPS)
+    else : 
+        psi = psi_init
+        chi_init = max(psi.chi)
+        if chi_init > chi_max // 2: 
+            dmrg_params["chi_list"] = None
+            dmrg_params["mixer"] = False
+            dmrg_params["mixer_params"] = None
+
 
     eng = tenpy_dmrg.TwoSiteDMRGEngine(psi, model, dmrg_params)
     E, psi = eng.run()   # E is energy per site for iDMRG
