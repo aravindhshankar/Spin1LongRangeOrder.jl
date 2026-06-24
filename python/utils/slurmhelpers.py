@@ -1,6 +1,6 @@
 import math
 import re 
-import io as io
+from . import io as io
 
 def interleaved_indices(n_items, n_tasks):
     """
