@@ -30,6 +30,7 @@ from tenpy.models.model import CouplingMPOModel
 from tenpy.networks.site import SpinHalfFermionSite
 from tenpy.networks.mps import MPS
 from tenpy.algorithms import dmrg as tenpy_dmrg
+from tenpy.algorithms.vumps import TwoSiteVUMPSEngine
 import sys
 sys.path.append('..')
 import utils.io as io
@@ -376,7 +377,6 @@ def scan_deltaV(t=1.0, U=0.1, Vpp=0.8,
         #     dmrg_params['start_env'] = 10
         print(f"  {dV:6.3f}  {Vpm:8.3f}  {E:14.8f}  {chi:12.4f}  {Sq0:10.4f}, {xi:10.4f}")
 
-    
 
 
 # ─── CLI ─────────────────────────────────────────────────────────────────────
