@@ -281,7 +281,7 @@ def run_finite_dmrg(N=20, t=1.0, U=4.0, Vpp=0.5, Vpm=1.5,
 
 # ─── Scan ΔV to locate FM transition ─────────────────────────────────────────
 def scan_deltaV(t=1.0, U=0.1, Vpp=0.8,
-                dV_values=None, chi_max=100, n_sweeps=500, max_err=1e-5, saveflag=False, ROOTDIR='../../data/iDMRG/'):
+                dV_values=None, chi_max=100, n_sweeps=500, max_err=1e-5, saveflag=False, diagnostics=True, ROOTDIR='../../data/iDMRG/'):
     """
     Fix V^{++} and scan V^{+-} - V^{++} from 0 upward.
     The FM transition is signalled by:
@@ -365,6 +365,12 @@ def scan_deltaV(t=1.0, U=0.1, Vpp=0.8,
             "model_params" : model_params, 
             "dmrg_params"  : dmrg_params,
         }
+        if diagnostics:
+            results["diagnostics"] = {
+                "sweep_stats": eng.sweep_stats,
+                # "update_stats": eng.update_stats, # we don't want this because it takes up a shyat-ton of memory
+                "age" : eng.update_stats["age"][::10] # just some additional compression
+            }
 
         if saveflag:
             savefilename = os.path.join(JOBDIR, f"Vpm_{Vpm:.4f}_chimax_{chi_max}.h5")

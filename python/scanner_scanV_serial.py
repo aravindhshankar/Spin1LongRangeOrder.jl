@@ -35,12 +35,12 @@ if not os.path.exists(ROOTDIR):
 # JOBDIR = os.path.join(ROOTDIR, f"t_{t:.2f}_U_{U:.2f}_Vpp_{Vpp:.3f}")
 # os.makedirs(JOBDIR, exist_ok=True)
 
-chimax = 100
+chimax = 20
 nsweeps = 1000
-max_err = 1e-5
+max_err = 1e-6
 
 print("STARTING scan_deltaV", flush=True)
 
-scan_deltaV(t, U, Vpp, dVlist, chimax, nsweeps, max_err, saveflag=True, ROOTDIR=ROOTDIR)
+scan_deltaV(t, U, Vpp, dVlist, chimax, nsweeps, max_err, saveflag=True, diagnostics=True, ROOTDIR=ROOTDIR)
 
 print("ENDED scan_deltaV", flush=True)

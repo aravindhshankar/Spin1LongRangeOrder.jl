@@ -1,14 +1,14 @@
 #!/bin/bash
 #
-#SBATCH --job-name=chi100IDMRG
+#SBATCH --job-name=chi20IDMRG
 #SBATCH --partition=cmsp,long
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=6
 #
-#SBATCH --mem=6G
-#SBATCH --time=23:00:00
+#SBATCH --mem=2G
+#SBATCH --time=10:00:00
 #SBATCH --output=logs/%x_%j.out
 
 mkdir -p logs
