@@ -88,7 +88,7 @@ class HubbardSpinDepV(CouplingMPOModel):
 
 # ─── iDMRG ───────────────────────────────────────────────────────────────────
 def run_idmrg(t=1.0, U=4.0, Vpp=0.5, Vpm=1.5, chi_max=100, n_sweeps=12, max_err=1e-5,
-              verbose=True, psi_init=None):
+              verbose=True, psi_init=None, diagnostics=False):
     """
     Run iDMRG for HubbardSpinDepV in the thermodynamic limit.
     Unit cell L=2 (minimum for a non-trivial iMPS at half filling).
@@ -98,6 +98,7 @@ def run_idmrg(t=1.0, U=4.0, Vpp=0.5, Vpm=1.5, chi_max=100, n_sweeps=12, max_err=
         print(f"  t={t}  U={U}  V^{{++}}={Vpp}  V^{{+-}}={Vpm}")
         print(f"  ΔV = V^{{+-}} - V^{{++}} = {Vpm-Vpp:.3f}  (>0 drives FM)")
         print("=" * 65)
+
     
     chi_list = {0:chi_max//2, 21: int(3*chi_max/4), 51:chi_max}
     dmrg_params = {
@@ -116,7 +117,7 @@ def run_idmrg(t=1.0, U=4.0, Vpp=0.5, Vpm=1.5, chi_max=100, n_sweeps=12, max_err=
         # "N_sweeps_check": 1,
         "min_sweeps": 30,
         "max_sweeps": n_sweeps,
-        "update_env": 10,
+        "update_env": 4,
         # "start_env": 10,
         'max_E_err': max_err, #precision in energy 
         'max_S_err': max_err, #precision in entropy
@@ -127,7 +128,6 @@ def run_idmrg(t=1.0, U=4.0, Vpp=0.5, Vpm=1.5, chi_max=100, n_sweeps=12, max_err=
         L=2, cons_N="N", cons_Sz="None",
     )
     model = HubbardSpinDepV(model_params)
-
     if not psi_init:
         # Quarter-filling, Sz=N/2 initial state
         psi = MPS.from_product_state(model.lat.mps_sites(), ["up", "empty"] , bc=model.lat.bc_MPS)
@@ -148,17 +148,20 @@ def run_idmrg(t=1.0, U=4.0, Vpp=0.5, Vpm=1.5, chi_max=100, n_sweeps=12, max_err=
     if not converged and total_sweeps >= eng.options['max_sweeps']:
         print(f"Halted at maximum sweeps limit ({total_sweeps}) without fully converging.")
 
+    results = {
+        "model_params" : model_params, 
+        "dmrg_params"  : dmrg_params,
+        "converged"    : converged,
+        }
     if verbose:
-        results                 = _report_idmrg(E, psi)
-        results["model_params"] = model_params
-        results["dmrg_params"]  = dmrg_params
-        results["converged"]    = converged
+        report                  = _report_idmrg(E, psi)
+        results.update(report)
 
-    else:
-        results = {
-            "model_params" : model_params, 
-            "dmrg_params"  : dmrg_params,
-            "converged"    : converged,
+    if diagnostics:
+        results["diagnostics"] = {
+            "sweep_stats": eng.sweep_stats,
+            # "update_stats": eng.update_stats, # we don't want this because it takes up a shyat-ton of memory
+            "age" : eng.update_stats["age"][::10] # just some additional compression
         }
 
     return E, psi, model, results
