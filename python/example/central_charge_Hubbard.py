@@ -79,15 +79,17 @@ def example_DMRG_tf_ising_infinite_S_xi_scaling(Vpm):
     psi = MPS.from_product_state(M.lat.mps_sites(), ["up", "empty"] , bc=M.lat.bc_MPS)
     dmrg_params = {
         'start_env': 10,
-        'mixer': False,
-        #  'mixer_params': {'amplitude': 1.e-3, 'decay': 5., 'disable_after': 50},
-        'trunc_params': {'chi_max': 5, 'svd_min': 1.0e-10},
-        'max_E_err': 1.0e-9,
-        'max_S_err': 1.0e-6,
+        # 'mixer': False,
+        'mixer' : True,
+        'mixer_params': {'amplitude': 1.e-3, 'decay': 5., 'disable_after': 50},
+        'trunc_params': {'chi_max': 20, 'svd_min': 1.0e-10},
+        'max_E_err': 1.0e-6,
+        'max_S_err': 1.0e-5,
         'update_env': 0,
     }
 
-    chi_list = np.arange(7, 31, 2)
+    # chi_list = np.arange(7, 31, 2)
+    chi_list = np.arange(20, 110, 10)
     s_list = []
     xi_list = []
     eng = dmrg.TwoSiteDMRGEngine(psi, M, dmrg_params)
@@ -158,5 +160,5 @@ if __name__ == '__main__':
     import logging
 
     logging.basicConfig(level=logging.INFO)
-    s_list, xi_list = example_DMRG_tf_ising_infinite_S_xi_scaling(Vpm=2.0) #Deep in para phase 
+    s_list, xi_list = example_DMRG_tf_ising_infinite_S_xi_scaling(Vpm=3.0) #Deep in para phase 
     fit_plot_central_charge(s_list, xi_list, 'central_charge_para.pdf')
