@@ -20,7 +20,7 @@ from tenpy.models.model import CouplingMPOModel
 from tenpy.networks.site import SpinHalfFermionSite
 import sys
 sys.path.append('..')
-from src.utils import io as io
+import utils.io as io
 
 
 class HubbardSpinDepV(CouplingMPOModel):
