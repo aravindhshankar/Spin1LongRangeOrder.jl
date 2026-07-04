@@ -76,7 +76,9 @@ def example_DMRG_hubbard_infinite_S_xi_scaling(Vpm):
         L=2, cons_N="N", cons_Sz="None",
     )
     M = HubbardSpinDepV(model_params)
-    psi, _  = io.load_mps_with_metadata("../../data/iDMRG/v2fwd/t_1.00_U_0.10_Vpp_0.800_consNf0_25_chimax_100/Vpm_3.8000_chimax_100.h5")
+    # psi, _  = io.load_mps_with_metadata("../../data/iDMRG/v2fwd/t_1.00_U_0.10_Vpp_0.800_consNf0_25_chimax_100/Vpm_3.8000_chimax_100.h5")
+    psi, _  = io.load_mps_with_metadata(f"./lastVpm_{Vpm:.3f}_chi300.h5")
+    print("loaded intital psi, starting ...........", flush=True)
     psi.canonical_form_infinite2()
     dmrg_params = {
         'start_env': 10,
@@ -84,13 +86,13 @@ def example_DMRG_hubbard_infinite_S_xi_scaling(Vpm):
         'mixer' : True,
         'mixer_params': {'amplitude': 1e-2, 'decay': 2., 'disable_after': 200},
         'trunc_params': {'chi_max': 100, 'svd_min': 1.0e-10},
-        'max_E_err': 1.0e-5,
-        'max_S_err': 1.0e-5,
+        'max_E_err': 1.0e-7,
+        'max_S_err': 1.0e-7,
         'update_env': 0,
     }
 
     # chi_list = np.arange(7, 31, 2)
-    chi_list = np.arange(100, 310, 20)
+    chi_list = np.arange(320, 510, 20)
     s_list = []
     xi_list = []
     eng = dmrg.TwoSiteDMRGEngine(psi, M, dmrg_params)
@@ -115,14 +117,17 @@ def example_DMRG_hubbard_infinite_S_xi_scaling(Vpm):
         xi_list.append(psi.correlation_length2())
 
         print(chi, time.time() - t0, s_list[-1], xi_list[-1], flush=True)
-        tenpy.tools.optimization.optimize(3)  # quite some speedup for small chi
+        # tenpy.tools.optimization.optimize(3)  # quite some speedup for small chi
+        
+        results = {
+            "diagnostics" : eng.sweep_stats, 
+            "model_params" : model_params, 
+            "dmrg_params" : dmrg_params,
+        }
+        io.save_mps_with_metadata(f"lastVpm_{Vpm:.3f}_chi{chi}.h5", psi, results)
 
         print('SETTING NEW BOND DIMENSION')
 
-    results = {
-        "diagnostics" : eng.sweep_stats
-    }
-    io.save_mps_with_metadata("lastVpm_{Vpm:.3f}.h5", psi, results)
     return s_list, xi_list
 
 
@@ -162,4 +167,4 @@ if __name__ == '__main__':
 
     logging.basicConfig(level=logging.INFO)
     s_list, xi_list = example_DMRG_hubbard_infinite_S_xi_scaling(Vpm=3.8) #Deep in para phase 
-    fit_plot_central_charge(s_list, xi_list, 'central_charge_para.pdf')
+    fit_plot_central_charge(s_list, xi_list, 'central_charge_para300_500.pdf')
