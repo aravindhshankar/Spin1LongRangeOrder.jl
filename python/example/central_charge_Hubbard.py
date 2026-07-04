@@ -69,27 +69,28 @@ class HubbardSpinDepV(CouplingMPOModel):
         if abs(mu) > 1e-12:
             self.add_onsite(-mu, 0, "Ntot")
 
-def example_DMRG_tf_ising_infinite_S_xi_scaling(Vpm):
+def example_DMRG_hubbard_infinite_S_xi_scaling(Vpm):
     model_params = dict(
         t=1.0, U=0.1, Vpp=0.8, Vpm=Vpm, mu=0.0,
         bc_MPS="infinite",
         L=2, cons_N="N", cons_Sz="None",
     )
     M = HubbardSpinDepV(model_params)
-    psi = MPS.from_product_state(M.lat.mps_sites(), ["up", "empty"] , bc=M.lat.bc_MPS)
+    psi, _  = io.load_mps_with_metadata("../../data/iDMRG/v2fwd/t_1.00_U_0.10_Vpp_0.800_consNf0_25_chimax_100/Vpm_3.8000_chimax_100.h5")
+    psi.canonical_form_infinite2()
     dmrg_params = {
         'start_env': 10,
         # 'mixer': False,
         'mixer' : True,
-        'mixer_params': {'amplitude': 1.e-3, 'decay': 5., 'disable_after': 50},
-        'trunc_params': {'chi_max': 20, 'svd_min': 1.0e-10},
-        'max_E_err': 1.0e-6,
+        'mixer_params': {'amplitude': 1e-2, 'decay': 2., 'disable_after': 200},
+        'trunc_params': {'chi_max': 100, 'svd_min': 1.0e-10},
+        'max_E_err': 1.0e-5,
         'max_S_err': 1.0e-5,
         'update_env': 0,
     }
 
     # chi_list = np.arange(7, 31, 2)
-    chi_list = np.arange(20, 110, 10)
+    chi_list = np.arange(100, 310, 20)
     s_list = []
     xi_list = []
     eng = dmrg.TwoSiteDMRGEngine(psi, M, dmrg_params)
@@ -111,9 +112,9 @@ def example_DMRG_tf_ising_infinite_S_xi_scaling(Vpm):
         ##   Calculating bond entropy and correlation length  ##
         s_list.append(psi.entanglement_entropy()[0])
         # the bond 0 is between MPS unit cells and hence sensible even for 2D lattices.
-        xi_list.append(psi.correlation_length())
+        xi_list.append(psi.correlation_length2())
 
-        print(chi, time.time() - t0, np.mean(psi.expectation_value(M.H_bond)), s_list[-1], xi_list[-1], flush=True)
+        print(chi, time.time() - t0, s_list[-1], xi_list[-1], flush=True)
         tenpy.tools.optimization.optimize(3)  # quite some speedup for small chi
 
         print('SETTING NEW BOND DIMENSION')
@@ -160,5 +161,5 @@ if __name__ == '__main__':
     import logging
 
     logging.basicConfig(level=logging.INFO)
-    s_list, xi_list = example_DMRG_tf_ising_infinite_S_xi_scaling(Vpm=3.0) #Deep in para phase 
+    s_list, xi_list = example_DMRG_hubbard_infinite_S_xi_scaling(Vpm=3.8) #Deep in para phase 
     fit_plot_central_charge(s_list, xi_list, 'central_charge_para.pdf')
