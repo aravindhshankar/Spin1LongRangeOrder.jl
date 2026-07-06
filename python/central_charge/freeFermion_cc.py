@@ -18,10 +18,12 @@ from tenpy.models.tf_ising import TFIChain
 from tenpy.networks.mps import MPS
 from tenpy.models.model import CouplingMPOModel
 from tenpy.networks.site import SpinHalfFermionSite
-import sys
+import sys, os
 sys.path.append('..')
 import utils.io as io
 
+ROOTDIR = '../../data/iDMRG/ffcc/'
+os.makedirs(ROOTDIR, exist_ok=True)
 
 class HubbardSpinDepV(CouplingMPOModel):
     """
@@ -70,12 +72,9 @@ class HubbardSpinDepV(CouplingMPOModel):
         # Chemical potential
         if abs(mu) > 1e-12:
             self.add_onsite(-mu, 0, "Ntot")
-        # Spin-mixing terms
-        if abs(hx) > 1e-12:
-            self.add_onsite(hx, 0, "Sx")
-        #Spin - polarization: 
-        if abs(hz) > 1e-12: 
-            self.add_onsite(hz, 0, "Sz")
+
+        self.add_onsite(hx, 0, "Sx")
+        self.add_onsite(hz, 0, "Sz")
 
 def example_DMRG_hubbard_infinite_S_xi_scaling(hx):
     model_params = dict(
@@ -88,19 +87,21 @@ def example_DMRG_hubbard_infinite_S_xi_scaling(hx):
     # psi, _  = io.load_mps_with_metadata(f"./lastVpm_{Vpm:.3f}_chi300.h5")
     # print("loaded intital psi, starting ...........", flush=True)
     # psi.canonical_form_infinite2()
-    psi = MPS.from_product_state(M.lat.mps_sites(), ["full", "empty", "empty", "empty"] , bc=M.lat.bc_MPS)
+    # psi = MPS.from_product_state(M.lat.mps_sites(), ["full", "empty", "empty", "empty"] , bc=M.lat.bc_MPS)
+    psi, _ = io.load_mps_with_metadata("ff_chi80.h5")
     dmrg_params = {
         'start_env': 10,
         # 'mixer': False,
         'mixer' : True,
         'mixer_params': {'amplitude': 1e-2, 'decay': 1.2, 'disable_after': 50},
-        'trunc_params': {'chi_max': int(5), 'svd_min': 1.0e-10},
-        'max_E_err': 1.0e-8,
+        'trunc_params': {'chi_max': int(78), 'svd_min': 1.0e-11},
+        'max_E_err': 1.0e-9,
         'max_S_err': 1.0e-6,
         'update_env': 0,
     }
 
-    chi_list = np.arange(40, 82, 2)
+    # chi_list = np.arange(40, 82, 2)
+    chi_list = np.arange(80, 501, 20)
     # chi_list = np.arange(320, 510, 20)
     s_list = []
     xi_list = []
@@ -127,17 +128,16 @@ def example_DMRG_hubbard_infinite_S_xi_scaling(hx):
 
         print(chi, time.time() - t0, s_list[-1], xi_list[-1], flush=True)
         tenpy.tools.optimization.optimize(3)  # quite some speedup for small chi
+        # if chi % 50 == 0:
+        if True:
+            results = {
+                "diagnostics" : eng.sweep_stats, 
+                "model_params" : model_params, 
+                "dmrg_params" : dmrg_params,
+        }
+        io.save_mps_with_metadata(os.path.join(ROOTDIR, f"ff_chi{chi}.h5"), psi, results) 
         print('SETTING NEW BOND DIMENSION')
         
-    results = {
-        "diagnostics" : eng.sweep_stats, 
-        "model_params" : model_params, 
-        "dmrg_params" : dmrg_params,
-    }
-    io.save_mps_with_metadata(f"ff_chi{chi}.h5", psi, results)
-
-        
-
     return s_list, xi_list
 
 
@@ -176,5 +176,5 @@ if __name__ == '__main__':
     import logging
 
     logging.basicConfig(level=logging.INFO)
-    s_list, xi_list = example_DMRG_hubbard_infinite_S_xi_scaling(hx=1e-8)
-    fit_plot_central_charge(s_list, xi_list, 'central_charge_ff.pdf')
+    s_list, xi_list = example_DMRG_hubbard_infinite_S_xi_scaling(hx=0.0)
+    fit_plot_central_charge(s_list, xi_list, 'central_charge_ff_80_300.pdf')

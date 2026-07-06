@@ -18,10 +18,12 @@ from tenpy.models.tf_ising import TFIChain
 from tenpy.networks.mps import MPS
 from tenpy.models.model import CouplingMPOModel
 from tenpy.networks.site import SpinHalfFermionSite
-import sys
+import sys, os
 sys.path.append('..')
 import utils.io as io
 
+ROOTDIR = '../../data/iDMRG/Vpm3.8cc/'
+os.makedirs(ROOTDIR, exist_ok=True)
 
 class HubbardSpinDepV(CouplingMPOModel):
     """
@@ -49,6 +51,8 @@ class HubbardSpinDepV(CouplingMPOModel):
         Vpp = model_params.get("Vpp", None)   # V^{++}: same spin
         Vpm = model_params.get("Vpm", None)   # V^{+-}: opposite spin
         mu  = model_params.get("mu",  0.0)
+        hx  = model_params.get("hx", 0.0)
+        hz  = model_params.get("hz", 0.0)
 
         # NN hopping (plus_hc=True adds the Hermitian conjugate automatically)
         self.add_coupling(-t, 0, "Cdu", 0, "Cu", 1, plus_hc=True)
@@ -65,34 +69,37 @@ class HubbardSpinDepV(CouplingMPOModel):
         self.add_coupling(Vpm, 0, "Nu", 0, "Nd", 1)
         self.add_coupling(Vpm, 0, "Nd", 0, "Nu",   1)
 
+        self.add_onsite(hx, 0, "Sx")
+        self.add_onsite(hz, 0, "Sz")
+
         # Chemical potential
         if abs(mu) > 1e-12:
             self.add_onsite(-mu, 0, "Ntot")
 
 def example_DMRG_hubbard_infinite_S_xi_scaling(Vpm):
     model_params = dict(
-        t=1.0, U=0.1, Vpp=0.8, Vpm=Vpm, mu=0.0,
+        t=1.0, U=0.1, Vpp=0.8, Vpm=Vpm, mu=0.0, hx=0.0, hz=0.0,
         bc_MPS="infinite",
-        L=2, cons_N="N", cons_Sz="None",
+        L=4, cons_N="N", cons_Sz="None",
     )
     M = HubbardSpinDepV(model_params)
     # psi, _  = io.load_mps_with_metadata("../../data/iDMRG/v2fwd/t_1.00_U_0.10_Vpp_0.800_consNf0_25_chimax_100/Vpm_3.8000_chimax_100.h5")
-    psi, _  = io.load_mps_with_metadata(f"./lastVpm_{Vpm:.3f}_chi300.h5")
+    psi, _  = io.load_mps_with_metadata(f"./Vpm3.8chi80.h5")
     print("loaded intital psi, starting ...........", flush=True)
     psi.canonical_form_infinite2()
     dmrg_params = {
         'start_env': 10,
         # 'mixer': False,
         'mixer' : True,
-        'mixer_params': {'amplitude': 1e-2, 'decay': 2., 'disable_after': 200},
-        'trunc_params': {'chi_max': 100, 'svd_min': 1.0e-10},
+        'mixer_params': {'amplitude': 1e-2, 'decay': 1.2, 'disable_after': 100},
+        'trunc_params': {'chi_max': 78, 'svd_min': 1.0e-10},
         'max_E_err': 1.0e-7,
         'max_S_err': 1.0e-7,
         'update_env': 0,
     }
 
     # chi_list = np.arange(7, 31, 2)
-    chi_list = np.arange(320, 510, 20)
+    chi_list = np.arange(80, 501, 20)
     s_list = []
     xi_list = []
     eng = dmrg.TwoSiteDMRGEngine(psi, M, dmrg_params)
@@ -119,12 +126,14 @@ def example_DMRG_hubbard_infinite_S_xi_scaling(Vpm):
         print(chi, time.time() - t0, s_list[-1], xi_list[-1], flush=True)
         # tenpy.tools.optimization.optimize(3)  # quite some speedup for small chi
         
-        results = {
-            "diagnostics" : eng.sweep_stats, 
-            "model_params" : model_params, 
-            "dmrg_params" : dmrg_params,
-        }
-        io.save_mps_with_metadata(f"lastVpm_{Vpm:.3f}_chi{chi}.h5", psi, results)
+        # if chi % 50 == 0:
+        if True:
+            results = {
+                "diagnostics" : eng.sweep_stats, 
+                "model_params" : model_params, 
+                "dmrg_params" : dmrg_params,
+            }
+            io.save_mps_with_metadata(os.path.join(ROOTDIR, f"Vpm_{Vpm:.3f}_chi{chi}.h5"), psi, results)
 
         print('SETTING NEW BOND DIMENSION')
 
@@ -167,4 +176,4 @@ if __name__ == '__main__':
 
     logging.basicConfig(level=logging.INFO)
     s_list, xi_list = example_DMRG_hubbard_infinite_S_xi_scaling(Vpm=3.8) #Deep in para phase 
-    fit_plot_central_charge(s_list, xi_list, 'central_charge_para300_500.pdf')
+    fit_plot_central_charge(s_list, xi_list, 'central_charge_para80_300.pdf')
