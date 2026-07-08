@@ -11,7 +11,7 @@ import sys
 sys.path.append('..')
 import utils.io as io
 import os 
-from consNfextendedHubbard import HubbardSpinDepV
+from .consNfextendedHubbard import HubbardSpinDepV
 
 def scanner_v1(dV_values=None, t=1.0, U=0.1, Vpp=0.8, hz=-1e-14, hx=0.0,
                chi_max=1000, n_sweeps=1000, max_err=1e-7, 
