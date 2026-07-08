@@ -50,6 +50,8 @@ class HubbardSpinDepV(CouplingMPOModel):
         Vpp   : float — V^{++} = V^{--}, same-spin NN repulsion 
         Vpm   : float — V^{+-} = V^{-+}, opposite-spin NN repulsion
                         FM condition: Vpm > Vpp
+        hx    : float - hx
+        hz    : float - hz
         mu    : float — chemical potential (default 0.0, half filling)
         bc_MPS    : 'infinite' or 'finite'
         L         : unit cell / chain length
@@ -66,6 +68,8 @@ class HubbardSpinDepV(CouplingMPOModel):
         Vpp = model_params.get("Vpp", None)   # V^{++}: same spin
         Vpm = model_params.get("Vpm", None)   # V^{+-}: opposite spin
         mu  = model_params.get("mu",  0.0)
+        hx  = model_params.get("hx", 0.0)
+        hz  = model_params.get("hz", 0.0)
 
         # NN hopping (plus_hc=True adds the Hermitian conjugate automatically)
         self.add_coupling(-t, 0, "Cdu", 0, "Cu", 1, plus_hc=True)
@@ -81,6 +85,9 @@ class HubbardSpinDepV(CouplingMPOModel):
         # V^{+-}: opposite-spin NN repulsion  (↑↓ and ↓↑)
         self.add_coupling(Vpm, 0, "Nu", 0, "Nd", 1)
         self.add_coupling(Vpm, 0, "Nd", 0, "Nu",   1)
+
+        self.add_onsite(hx, 0, "Sx")
+        self.add_onsite(hz, 0, "Sz")
 
         # Chemical potential
         if abs(mu) > 1e-12:
@@ -282,12 +289,7 @@ def run_finite_dmrg(N=20, t=1.0, U=4.0, Vpp=0.5, Vpm=1.5,
 # ─── Scan ΔV to locate FM transition ─────────────────────────────────────────
 def scan_deltaV(t=1.0, U=0.1, Vpp=0.8,
                 dV_values=None, chi_max=100, n_sweeps=500, max_err=1e-5, saveflag=False, diagnostics=True, ROOTDIR='../../data/iDMRG/'):
-    """
-    Fix V^{++} and scan V^{+-} - V^{++} from 0 upward.
-    The FM transition is signalled by:
-      - diverging χ(q=0)
-      - growing S(q=0) / spin structure factor at q=0
-    """
+
     if dV_values is None:
         dV_values = np.arange(2.9, 4.0, 0.1)[::-1]
 

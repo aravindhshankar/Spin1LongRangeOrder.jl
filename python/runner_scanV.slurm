@@ -1,14 +1,14 @@
 #!/bin/bash
 #
-#SBATCH --job-name=chi20IDMRG
+#SBATCH --job-name=scanreIDMRG
 #SBATCH --partition=cmsp,long
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=6
-#
-#SBATCH --mem=2G
-#SBATCH --time=10:00:00
+#SBATCH --array=0-2
+#SBATCH --mem=4G
+#SBATCH --time=23:30:00
 #SBATCH --output=logs/%x_%j.out
 
 mkdir -p logs
