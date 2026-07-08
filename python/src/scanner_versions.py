@@ -32,7 +32,7 @@ def scanner_v1(dV_values=None, t=1.0, U=0.1, Vpp=0.8, hz=-1e-14, hx=0.0,
         os.makedirs(JOBDIR, exist_ok=True)
 
     model_params = dict(
-        t=t, U=U, Vpp=Vpp, Vpm=None, mu=0.0, hx=hx, hz=hz,
+        t=t, U=U, Vpp=Vpp, Vpm=0.0, mu=0.0, hx=hx, hz=hz,
         bc_MPS="infinite",
         L=4, cons_N="N", cons_Sz="None",
     )
