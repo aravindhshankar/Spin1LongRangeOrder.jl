@@ -6,10 +6,12 @@
 #SBATCH --ntasks-per-node=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=6
-#SBATCH --array=0-2
+#SBATCH --array=0-3
 #SBATCH --mem=4G
 #SBATCH --time=23:30:00
 #SBATCH --output=logs/%x_%j.out
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=ashankar@ictp.it
 
 mkdir -p logs
 
