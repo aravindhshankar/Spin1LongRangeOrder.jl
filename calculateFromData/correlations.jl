@@ -24,7 +24,8 @@ function corr_output_filename(datafilename)
     return joinpath(outdir, replace(fname, ".h5" => "_corrs.h5"))
 end
 
-function compute_and_save_correlations(datafilename; blas_threads_per_task::Int=1, site::Int=20)
+
+function compute_and_save_correlations(datafilename; blas_threads_per_task::Int=1)
     outfile = corr_output_filename(datafilename)
 
     if isfile(outfile)
@@ -37,39 +38,31 @@ function compute_and_save_correlations(datafilename; blas_threads_per_task::Int=
 
     BLAS.set_num_threads(blas_threads_per_task)
 
-    # Pairwise correlation matrices
-    t_sz       = Threads.@spawn correlation_matrix(psi, "Sz", "Sz")[site, :]
-    t_spm      = Threads.@spawn correlation_matrix(psi, "S+", "S-")[site, :]
-    t_charge   = Threads.@spawn correlation_matrix(psi, "Ntot", "Ntot")[site, :]
-    t_elec_up  = Threads.@spawn correlation_matrix(psi, "Cdagup", "Cup")[site, :]
-    t_elec_dn  = Threads.@spawn correlation_matrix(psi, "Cdagdn", "Cdn")[site, :]
+    # Full correlation matrices (N x N each) — no site selection here anymore
+    t_sz      = Threads.@spawn correlation_matrix(psi, "Sz", "Sz")
+    t_spm     = Threads.@spawn correlation_matrix(psi, "S+", "S-")
+    t_charge  = Threads.@spawn correlation_matrix(psi, "Ntot", "Ntot")
+    t_elec_up = Threads.@spawn correlation_matrix(psi, "Cdagup", "Cup")
+    t_elec_dn = Threads.@spawn correlation_matrix(psi, "Cdagdn", "Cdn")
 
-    # Single-site expectation values for connected correlators
+    # cheap, do directly on main thread while the above run
     sz_exp   = expect(psi, "Sz")
     ntot_exp = expect(psi, "Ntot")
 
-    szcorr_full     = fetch(t_sz)
-    spmcorr         = fetch(t_spm)
-    chargecorr_full = fetch(t_charge)
-    electroncorr_up = fetch(t_elec_up)
-    electroncorr_dn = fetch(t_elec_dn)
-
-
-    # Connected correlators
-    szcorr_conn     = szcorr_full     .- sz_exp[site]   .* sz_exp
-    chargecorr_conn = chargecorr_full .- ntot_exp[site] .* ntot_exp
+    szmat      = fetch(t_sz)
+    spmmat     = fetch(t_spm)
+    chargemat  = fetch(t_charge)
+    elecupmat  = fetch(t_elec_up)
+    elecdnmat  = fetch(t_elec_dn)
 
     h5open(outfile, "w") do f
-        f["szcorr_full"]       = szcorr_full
-        f["szcorr_conn"]       = szcorr_conn
-        f["chargecorr_full"]   = chargecorr_full
-        f["chargecorr_conn"]   = chargecorr_conn
-        f["spmcorr"]           = spmcorr
-        f["electroncorr_up"]   = electroncorr_up
-        f["electroncorr_dn"]   = electroncorr_dn
-        f["sz_expect"]         = sz_exp
-        f["ntot_expect"]       = ntot_exp
-        f["site"]              = site
+        f["szmat"]       = szmat
+        f["chargemat"]   = chargemat
+        f["spmmat"]      = spmmat
+        f["elecupmat"]   = elecupmat
+        f["elecdnmat"]   = elecdnmat
+        f["sz_expect"]   = sz_exp
+        f["ntot_expect"] = ntot_exp
         for (k, v) in params
             try
                 f["params/$k"] = v
@@ -79,6 +72,6 @@ function compute_and_save_correlations(datafilename; blas_threads_per_task::Int=
         end
     end
 
-    println("Saved correlations to $outfile")
+    println("Saved correlation matrices to $outfile")
     return outfile
 end
