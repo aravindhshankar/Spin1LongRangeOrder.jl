@@ -10,7 +10,7 @@ let
     U=0.1
     N=64
     Nf=32
-    datadir = "data/Hubbard/N64consNf/"
+    datadir = "data/Hubbard/N{$N}consNf/"
     h5files = filter(f -> endswith(f, ".h5"),
                  readdir(datadir; join=true))
 
@@ -51,7 +51,7 @@ let
        linewidth=2,
        label="")
     title!("N=$N" * ", U=$U" * ", Vpp=$Vpp" * ", Nf=$Nf")
-    savefig("pngfigs/N64Np32.png")
-    # savefig("pngfigs/EnsN64Np32.png")
-    display(p)
+    savefig("pngfigs/N{$N}Np{$Nf}.png")
+    # savefig("pngfigs/EnsN{$N}Np{$Nf}.png")
+    # display(p)
 end
