@@ -1,7 +1,6 @@
 using HDF5
 using Plots
 using Printf
-using Polynomials
 gr()
 
 include(joinpath(@__DIR__, "correlations.jl"))  # for corr_output_filename, filename_builder
