@@ -1,7 +1,10 @@
 using HDF5
 using Plots
+using Polynomials
 using Printf
-gr()
+using LaTeXStrings
+using FFTW
+pyplot()
 
 include(joinpath(@__DIR__, "correlations.jl"))  # for corr_output_filename, filename_builder
 
@@ -95,9 +98,159 @@ let
     N = 256
     U = 0.1
     Vpp = 0.8
-    dV = 3.55 #choices 3.2, 3.5, 3.55, 3.7
+    dV = 3.2 #choices 3.2, 3.5, 3.55, 3.7
     t = 1.0
     datafilename = filename_builder(N, t, U, Vpp, dV)
 
-    plot_correlations(datafilename; title_prefix="N=$N, U=$U, Vpp=$Vpp, dV=$dV", nfit=50)
+    plot_correlations(datafilename; site=Int(N//4), title_prefix="N=$N, U=$U, Vpp=$Vpp, dV=$dV", nfit=50)
+end
+
+##
+let 
+    p = plot()
+    colordict = Dict(64=>:blue, 128=>:green, 256=>:red)
+    maxdist = range(1, stop=128, length=128)
+    for N in (64, 128, 256)
+        U = 0.1
+        Vpp = 0.8
+        dV = 3.2 #choices 3.2, 3.5, 3.55, 3.7
+        t = 1.0
+        datafilename = filename_builder(N, t, U, Vpp, dV)
+
+        data = load_correlations(datafilename)
+        site = Int(N//2)
+        xvals = 1:N
+        chargecorr_conn = data.chargemat[site, :] .- data.ntot_expect[site] .* data.ntot_expect
+        @show length(chargecorr_conn)
+        dist = xvals .- site
+        keep = dist .> 0
+        keep_neg = keep .& (chargecorr_conn .< 0)
+        @show length(chargecorr_conn[keep_neg])
+        plot!(dist[keep_neg], -chargecorr_conn[keep_neg], marker=:circle, 
+        color=colordict[N], strokecolor=colordict[N], lw=2, ms=2, label="N=$N")
+    end
+    plot!(yscale=:log10, xscale=:log10)
+    plot!(xlabel=raw"$x-\frac{N}{2}$", ylabel=raw"$| \delta\rho(x)\delta\rho(N/2)|$", title="Connected charge correlations", legendfontsize=12)
+    # fitline = @. -0.21/ (pi * maxdist^2) + 0.01  * cos(0.0 * pi * maxdist) * maxdist^(-1 - 0.21*pi) / (log(maxdist))^1.5
+    fitline = @. 0.07 * maxdist^(-2)
+    plot!(maxdist, abs.(fitline), ls=:dash, lw=2, color=:black, label=raw"$\sim x^{-2}$")
+    plot!(maxdist, 0.0034 * maxdist.^(-1.21), ls=:dash, lw=2, color=:black, label=raw"$\sim x^{-5/3}$")
+end
+
+##
+let
+    p = plot()
+    colordict = Dict(64=>:blue, 128=>:green, 256=>:red)
+    omegaGlob = 2π .* range(0, 0.5, length=20)
+    for N in (64, 128, 256)
+        U = 0.1
+        Vpp = 0.8
+        dV = 3.2 #choices 3.2, 3.5, 3.55, 3.7
+        t = 1.0
+        datafilename = filename_builder(N, t, U, Vpp, dV)
+
+        data = load_correlations(datafilename)
+        site = Int(N//2)
+        xvals = 1:N
+        chargecorr_conn = data.chargemat[site, :] .- data.ntot_expect[site] .* data.ntot_expect
+        spinzcorr_conn = data.szmat[site, :] .- data.sz_expect[site] .* data.sz_expect
+        # chargecorr_conn = spinzcorr_conn
+        @show length(chargecorr_conn)
+        dist = xvals .- site
+        keep = dist .> 0
+        keep_neg = keep .& (chargecorr_conn .< 0)
+        keep_neg_trunc = keep_neg .& (dist .< Int(N//4))
+        fft_chargecorr = fft(chargecorr_conn)
+        omega = 2π * (0:N-1) / N
+        # omega = 1:N-1
+        @show length(chargecorr_conn[keep_neg_trunc])
+        plot!(omega, abs.(fft_chargecorr), marker=:circle, 
+        color=colordict[N], strokecolor=colordict[N], lw=2, ms=2, label="N=$N")
+    end
+    plot!(yscale=:linear, xscale=:linear)
+    fitval = 0.21
+    # fitval = 1/pi
+    plot!(xlabel=raw"$k_n$", ylabel=raw"$ \mathcal{F}(\delta\rho(x)\delta\rho(N/2))$", title="Connected charge correlations", legendfontsize=12)
+    plot!(omegaGlob, fitval .* omegaGlob, ls=:dash, lw=2, color=:black, label=label = L"$%$(fitval)\,\omega$")
+    # vline!([pi/2], ls=:dash, lw=2, color=:black, label=L"$\frac{\pi}{2}$")
+
+
+end
+
+##
+let 
+    p = plot()
+    colordict = Dict(64=>:blue, 128=>:green, 256=>:red)
+    omegaGlob = 2π .* range(0, 0.5, length=20)
+    N=32
+    U = 0.0
+    Vpp = 0.0
+    dV = 0.0 #choices 3.2, 3.5, 3.55, 3.7
+    t = 1.0
+    site = Int(N//2)
+    datafilename = "FF_N32_Npart16_t1.0.h5"
+    psi = load_simulation(datafilename)
+    chargecorr  = correlation_matrix(psi, "Ntot", "Ntot")
+    chargecorr_conn = chargecorr[Int(N//2), :] .- expect(psi, "Ntot")[Int(N//2)] .* expect(psi, "Ntot")
+    spinzcorr_conn = correlation_matrix(psi, "Sz", "Sz")[Int(N//2), :] .- expect(psi, "Sz")[Int(N//2)] .* expect(psi, "Sz")
+    chargecorr_conn = spinzcorr_conn
+    xvals = 1:N
+
+    @show length(chargecorr_conn)
+    dist = xvals .- site
+    keep = dist .> 0
+    keep_neg = keep .& (chargecorr_conn .< 0)
+    keep_neg_trunc = keep_neg .& (dist .< Int(N//4))
+    fft_chargecorr = fft(chargecorr_conn)
+    omega = 2π * (0:N-1) / N
+    # omega = 1:N-1
+    @show length(chargecorr_conn[keep_neg_trunc])
+    plot!(omega, abs.(fft_chargecorr), marker=:circle, 
+    color=:red, strokecolor=:red, lw=2, ms=2, label="N=$N")
+    
+    plot!(yscale=:linear, xscale=:linear)
+    # fitval = 1.0/pi
+    fitval = 0.25/pi # for spin correlations
+    plot!(xlabel=raw"$k_n$", ylabel=raw"$ \mathcal{F}(\delta\rho(x)\delta\rho(N/2))$", title="Connected charge correlations in Free fermions", legendfontsize=12)
+    plot!(omegaGlob, fitval .* omegaGlob, ls=:dash, lw=2, color=:black, label=label = L"$\frac{1}{\pi}\,k$")
+end
+
+##
+let 
+    p = plot()
+    colordict = Dict(64=>:blue, 128=>:green, 256=>:red)
+    omegaGlob = 2π .* range(0, 0.5, length=20)
+    maxdist = range(1, 32)
+    N=32
+    U = 0.0
+    Vpp = 0.0
+    dV = 0.0 #choices 3.2, 3.5, 3.55, 3.7
+    t = 1.0
+    site = Int(N//2)
+    datafilename = "FF_N32_Npart16_t1.0.h5"
+    psi = load_simulation(datafilename)
+    chargecorr  = correlation_matrix(psi, "Ntot", "Ntot")
+    chargecorr_conn = chargecorr[Int(N//2), :] .- expect(psi, "Ntot")[Int(N//2)] .* expect(psi, "Ntot")
+    # spinzcorr_conn = correlation_matrix(psi, "Sz", "Sz")[Int(N//2), :] .- expect(psi, "Sz")[Int(N//2)] .* expect(psi, "Sz")
+    # chargecorr_conn = spinzcorr_conn
+    xvals = 1:N
+
+    @show length(chargecorr_conn)
+    dist = xvals .- site
+    keep = dist .> 0
+    keep_neg = keep .& (chargecorr_conn .< 0)
+    keep_neg_trunc = keep_neg .& (dist .< Int(N//4))
+
+    @show length(chargecorr_conn[keep_neg_trunc])
+    plot!(dist[keep_neg][1:1:end], abs.(chargecorr_conn[keep_neg][1:1:end]), marker=:circle, 
+        color=:red, strokecolor=:red, lw=2, ms=2, label="N=$N")
+    
+    plot!(yscale=:log, xscale=:log)
+    fitval = 1.0/pi
+    plot!(xlabel=raw"$x-\frac{N}{2}$", ylabel=raw"$| \delta\rho(x)\delta\rho(N/2)|$", title="Connected charge correlations Free fermions", legendfontsize=12)
+    plot!(maxdist, 0.07 * maxdist.^(-2), ls=:dash, lw=2, color=:black, label=raw"$\sim x^{-2}$")
+    
+
+
+
 end

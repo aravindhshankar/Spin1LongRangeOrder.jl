@@ -148,10 +148,10 @@ end
 
 # ─── Run a single DMRG calculation ───────────────────────────────────────────
 function run_dmrg(N, t, U, Vpp, Vpm; sites=nothing, initial_psi=nothing, sweepcount=100, bpin=0, verbose=true)
-  sites = isnothing(sites) ? siteinds("Electron", N; conserve_nf=false, conserve_sz=false) : sites
+  sites = isnothing(sites) ? siteinds("Electron", N; conserve_nf=true, conserve_sz=false) : sites
   # sites = siteinds("Electron", N; conserve_qns=true)
   H = build_hamiltonian(sites, t, U, Vpp, Vpm; bpin)
-  psi0 = isnothing(initial_psi) ? initial_mps(sites) : initial_psi
+  psi0 = isnothing(initial_psi) ? initial_mps(sites, Npart=Int(N//2)) : initial_psi
   sw = make_sweeps(sweepcount)
 
   obs = EnergyObserver(energy_tol=1e-8, min_sweeps=15)
@@ -344,7 +344,15 @@ function main()
   # scan_deltaV(N, t, U, Vpp; dV_range=0.0:0.1:5.0)
 end
 
-
+function singlemain()
+  N = 32
+  t = 1.0
+  U = 0.0
+  Vpp = 0.0
+  dV = 0.0 #choices 3.2, 3.5, 3.55, 3.7
+  E, psi, sites = run_dmrg(N, t, U, Vpp, Vpp + dV; sweepcount=100)
+  save_simulation("FF_N$N" * "_Npart$(Int(N/2))_t$(t).h5", psi)
+end
 function scanmain()
     N   = 32
     t   = 1.0
@@ -361,8 +369,10 @@ end
 
 ## 
 #main()
-
-scanmain()
+##
+let
+  singlemain()
+end
 
 ##
 # let 
