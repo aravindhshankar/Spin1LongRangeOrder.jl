@@ -1,14 +1,14 @@
 #!/bin/bash
 #
-#SBATCH --job-name=fixedN_scanHubbard
+#SBATCH --job-name=fixedN_scanHubbard200
 #SBATCH --partition=cmsp,long
-#SBATCH --array=1-2
+#SBATCH --array=4-4
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=6
-#SBATCH --mem=20G
-#SBATCH --time=23:00:00
+#SBATCH --mem=10G
+#SBATCH --time=23:30:00
 #SBATCH --output=logs/%x_%j.out
 #SBATCH --mail-user=ashankar@ictp.it
 #SBATCH --mail-type=ALL

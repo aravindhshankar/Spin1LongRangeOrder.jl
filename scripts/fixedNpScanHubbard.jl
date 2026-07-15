@@ -259,7 +259,7 @@ end
 
 # ─── Main ────────────────────────────────────────────────────────────────────
 function main()
-    Nlist = (64, 128, 256)
+    Nlist = (64, 128, 256, 200)
     idx = Base.parse(Int, ENV["SLURM_ARRAY_TASK_ID"])
     # total_tasks = Base.parse(Int, ENV["SLURM_ARRAY_TASK_COUNT"]) # assumes 1-based indexing
     N = Nlist[idx]
@@ -271,14 +271,18 @@ function main()
     # this_job_nparts = get_chunk(Npartlist, idx, total_tasks)
     this_job_nparts = (Int(N//2),)
 
-    Vpmreloadict = Dict(((64, 4.500), (128, 4.100), (256, 3.950))) # last available .h5 on disk
+    Vpmreloadict = Dict(((64, 4.500), (128, 4.100), (256, 3.950), (200, 3.95))) # last available .h5 on disk
     Vpmreloadval = Vpmreloadict[N]
     dvreloadval = round(Vpmreloadval - Vpp, digits=3)
     loadfilename = filename_builder(N, t, U, Vpp, dvreloadval)
 
-    println("-"^20, "loading from file", loadfilename, "-"^20)
-    startmps = load_simulation(loadfilename)
-    println("Load successful! Resuming simulation ...")
+    try 
+        println("-"^20, "loading from file", loadfilename, "-"^20)
+        startmps = load_simulation(loadfilename)
+        println("Load successful! Resuming simulation ...")
+    catch 
+        startmps = Nothing
+    end
     flush(stdout)
 
     step = 0.05
