@@ -38,11 +38,12 @@ let
     dVlist = 3.2:0.05:3.9
     # dVlist = (3.4, 3.5, 3.55, 3.6, 3.65, 3.85)
     Nlist = (64, 128, 256)
-    p = plot()
+    # p = plot()
+    p = scatter()
     Ndict = Dict()
-    beta = 1.0/3
+    beta = 1.0/2.8
     nu = 7.0/12
-    gstar = 3.56
+    gstar = 3.575
     for N in Nlist
         magzlist = Float64[]
         for dV in dVlist
@@ -50,12 +51,15 @@ let
             magz = abs(sum(load_correlations(datafilename).sz_expect)/N)
             push!(magzlist, magz)
         end
-        plot!(dVlist, magzlist, label="N=$N", markers=:circle)
-        # xvals = @. (dVlist - gstar) * (N ^ (1.0/nu))
-        # yvals = @. (magzlist) * (N^(beta/nu)) 
-        # plot!(xvals, yvals, label="N=$N")
+        # plot!(dVlist, magzlist, label="N=$N", markers=:circle)
+        xvals = @. (dVlist - gstar) * (N ^ (1.0/nu))
+        yvals = @. (magzlist) * (N^(beta/nu)) 
+        scatter!(xvals, yvals, label="N=$N", markers=:circle)
         Ndict[N] = magzlist
     end
+    scatter!(xlabel=L"(g-g_c)L^{1/\nu}")
+    scatter!(ylabel=L"L^{\beta/\nu}m(g,L)")
+    scatter!(title=L"g_c="*@sprintf("%.4f", gstar))
     display(p)
-    @show Ndict
+    # @show Ndict
 end
