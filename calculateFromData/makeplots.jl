@@ -107,6 +107,7 @@ end
 
 ##
 let 
+    #### PARA CORRELATION FUNCTIONS ############
     p = plot()
     colordict = Dict(64=>:blue, 128=>:green, 256=>:red)
     maxdist = range(1, stop=128, length=128)
@@ -134,14 +135,16 @@ let
     # fitline = @. -0.21/ (pi * maxdist^2) + 0.01  * cos(0.0 * pi * maxdist) * maxdist^(-1 - 0.21*pi) / (log(maxdist))^1.5
     fitline = @. 0.07 * maxdist^(-2)
     plot!(maxdist, abs.(fitline), ls=:dash, lw=2, color=:black, label=raw"$\sim x^{-2}$")
-    plot!(maxdist, 0.0034 * maxdist.^(-1.21), ls=:dash, lw=2, color=:black, label=raw"$\sim x^{-5/3}$")
+    # plot!(maxdist, 0.0034 * maxdist.^(-1.21), ls=:dash, lw=2, color=:black, label=raw"$\sim x^{1.21}$")
 end
 
 ##
 let
+    ######### PARA FOURIER ##############
     p = plot()
     colordict = Dict(64=>:blue, 128=>:green, 256=>:red)
-    omegaGlob = 2π .* range(0, 0.5, length=20)
+    # omegaGlob = 2π .* range(0, 0.5, length=20)
+    omegaGlob = 2π .* range(0, 0.05, length=20)
     for N in (64, 128, 256)
         U = 0.1
         Vpp = 0.8
@@ -154,7 +157,8 @@ let
         xvals = 1:N
         chargecorr_conn = data.chargemat[site, :] .- data.ntot_expect[site] .* data.ntot_expect
         spinzcorr_conn = data.szmat[site, :] .- data.sz_expect[site] .* data.sz_expect
-        # chargecorr_conn = spinzcorr_conn
+        spinpmcorr = data.spmmat[site, :]
+        chargecorr_conn = spinpmcorr
         @show length(chargecorr_conn)
         dist = xvals .- site
         keep = dist .> 0
@@ -168,17 +172,18 @@ let
         color=colordict[N], strokecolor=colordict[N], lw=2, ms=2, label="N=$N")
     end
     plot!(yscale=:linear, xscale=:linear)
-    fitval = 0.21
-    # fitval = 1/pi
+    # fitval = 0.21
+    fitval = 0.9/pi
     plot!(xlabel=raw"$k_n$", ylabel=raw"$ \mathcal{F}(\delta\rho(x)\delta\rho(N/2))$", title="Connected charge correlations", legendfontsize=12)
     plot!(omegaGlob, fitval .* omegaGlob, ls=:dash, lw=2, color=:black, label=label = L"$%$(fitval)\,\omega$")
-    # vline!([pi/2], ls=:dash, lw=2, color=:black, label=L"$\frac{\pi}{2}$")
+    vline!([pi/2], ls=:dash, lw=2, color=:black, label=L"$\frac{\pi}{2}$")
 
 
 end
 
 ##
 let 
+    ############# FREE FERMIONS FOURIER TRANSFORM for KC = 1 #############
     p = plot()
     colordict = Dict(64=>:blue, 128=>:green, 256=>:red)
     omegaGlob = 2π .* range(0, 0.5, length=20)
@@ -217,6 +222,7 @@ end
 
 ##
 let 
+    ########## FREE FERMION CORRELATION FUNCTIONS ###################
     p = plot()
     colordict = Dict(64=>:blue, 128=>:green, 256=>:red)
     omegaGlob = 2π .* range(0, 0.5, length=20)
@@ -247,10 +253,88 @@ let
     
     plot!(yscale=:log, xscale=:log)
     fitval = 1.0/pi
-    plot!(xlabel=raw"$x-\frac{N}{2}$", ylabel=raw"$| \delta\rho(x)\delta\rho(N/2)|$", title="Connected charge correlations Free fermions", legendfontsize=12)
+    plot!(xlabel=raw"$x-\frac{N}{2}$", ylabel=raw"$| \delta\rho(x)\delta\rho(N/2)|$", title=L"Connected charge correlations Free fermions ($2k_F = \frac{\pi}{2}$)", legendfontsize=12)
     plot!(maxdist, 0.07 * maxdist.^(-2), ls=:dash, lw=2, color=:black, label=raw"$\sim x^{-2}$")
     
 
 
 
+end
+
+
+let
+    ######### PARA FOURIER +- corr ##############
+    p = plot()
+    colordict = Dict(64=>:blue, 128=>:green, 256=>:red)
+    # omegaGlob = 2π .* range(0, 0.5, length=20)
+    omegaGlob = 2π .* range(0, 0.05, length=20)
+    for N in (64, 128, 256)
+        U = 0.1
+        Vpp = 0.8
+        dV = 3.2 #choices 3.2, 3.5, 3.55, 3.7
+        t = 1.0
+        datafilename = filename_builder(N, t, U, Vpp, dV)
+
+        data = load_correlations(datafilename)
+        site = Int(N//2)
+        xvals = 1:N
+        chargecorr_conn = data.chargemat[site, :] .- data.ntot_expect[site] .* data.ntot_expect
+        spinzcorr_conn = data.szmat[site, :] .- data.sz_expect[site] .* data.sz_expect
+        spinpmcorr = data.spmmat[site, :]
+        chargecorr_conn = spinpmcorr
+        @show length(chargecorr_conn)
+        dist = xvals .- site
+        keep = dist .> 0
+        keep_neg = keep .& (chargecorr_conn .< 0)
+        keep_neg_trunc = keep_neg .& (dist .< Int(N//4))
+        fft_chargecorr = fft(chargecorr_conn)
+        omega = 2π * (0:N-1) / N
+        # omega = 1:N-1
+        @show length(chargecorr_conn[keep_neg_trunc])
+        plot!(omega, abs.(fft_chargecorr), marker=:circle, 
+        color=colordict[N], strokecolor=colordict[N], lw=2, ms=2, label="N=$N")
+    end
+    plot!(yscale=:linear, xscale=:linear)
+    # fitval = 0.21
+    fitval = 0.9/pi
+    plot!(xlabel=raw"$k_n$", ylabel=raw"$ |\mathcal{F}(S^+(x)S^-(N/2))|$", title=L"Spin +- correlation ($2k_F = \pi/2$)", legendfontsize=12)
+    # plot!(omegaGlob, fitval .* omegaGlob, ls=:dash, lw=2, color=:black, label=label = L"$%$(fitval)\,\omega$")
+    vline!([pi/2, 3pi/2], ls=:dash, lw=2, color=:black, label=L"$\frac{\pi}{2}, \frac{3\pi}{2}$")
+
+end
+
+
+let 
+    #### PARA SPM +- CORRELATION FUNCTIONS ############
+    p = plot()
+    colordict = Dict(64=>:blue, 128=>:green, 256=>:red)
+    maxdist = range(1, stop=128, length=128)
+    for N in (64, 128, 256)
+        U = 0.1
+        Vpp = 0.8
+        dV = 3.2 #choices 3.2, 3.5, 3.55, 3.7
+        t = 1.0
+        datafilename = filename_builder(N, t, U, Vpp, dV)
+
+        data = load_correlations(datafilename)
+        site = Int(N//2)
+        xvals = 1:N
+        # chargecorr_conn = data.chargemat[site, :] .- data.ntot_expect[site] .* data.ntot_expect
+        spinpmcorr = data.spmmat[site, :]
+        chargecorr_conn = spinpmcorr
+        @show length(chargecorr_conn)
+        dist = xvals .- site
+        keep = dist .> 0
+        keep_neg = keep #.& (chargecorr_conn .< 0)
+        @show length(chargecorr_conn[keep_neg])
+        plot!(dist[keep_neg], abs.(-chargecorr_conn[keep_neg]), marker=:circle, 
+        color=colordict[N], strokecolor=colordict[N], lw=2, ms=2, label="N=$N")
+    end
+    plot!(yscale=:log10, xscale=:log10)
+    plot!(xlabel=raw"$x-\frac{N}{2}$", ylabel=raw"$| S^+(x)S^-(N/2)|$", title="Spin +- correlations", legendfontsize=12)
+    # fitline = @. -0.21/ (pi * maxdist^2) + 0.01  * cos(0.0 * pi * maxdist) * maxdist^(-1 - 0.21*pi) / (log(maxdist))^1.5
+    fitline = @. 0.07 * maxdist^(-0.947) #uses Kc = 0.67, Ks = 3.6
+    plot!(maxdist, abs.(fitline), ls=:dash, lw=2, color=:black, label=raw"$\sim x^{-\,(K_c + \frac{1}{K_s})}$")
+    plot!(legend =:bottomleft)
+    # plot!(maxdist, 0.0034 * maxdist.^(-1.21), ls=:dash, lw=2, color=:black, label=raw"$\sim x^{1.21}$")
 end
