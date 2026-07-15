@@ -47,13 +47,13 @@ let
         magzlist = Float64[]
         for dV in dVlist
             datafilename = filename_builder(N, t, U, Vpp, dV)
-            magz = abs.(sum(load_correlations(datafilename).sz_expect) / N)
+            magz = abs(sum(load_correlations(datafilename).sz_expect)/N)
             push!(magzlist, magz)
         end
-        # plot!(dVlist, magzlist, label="N=$N")
-        xvals = @. (dVlist - gstar) * (N ^ (1.0/nu))
-        yvals = @. (magzlist) * (N^(beta/nu)) 
-        plot!(xvals, yvals, label="N=$N")
+        plot!(dVlist, magzlist, label="N=$N", markers=:circle)
+        # xvals = @. (dVlist - gstar) * (N ^ (1.0/nu))
+        # yvals = @. (magzlist) * (N^(beta/nu)) 
+        # plot!(xvals, yvals, label="N=$N")
         Ndict[N] = magzlist
     end
     display(p)
