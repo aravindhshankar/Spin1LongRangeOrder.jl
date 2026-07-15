@@ -18,7 +18,7 @@ function make_sweeps(max_sweeps=50)
         fill((20,   1e-6,  1e-3), 2)...,
         fill((50,   1e-8,  1e-4), 3)...,
         fill((100,  1e-10, 1e-5), 5)...,
-        fill((200,  1e-12,  0.0), 10)...,
+        fill((200,  1e-12,  0.0), 5)...,
         fill((400,  1e-12, 0.0), 10)...,
         (500,  1e-12, 0.0),
     ]
@@ -116,7 +116,7 @@ function run_dmrg(N, t, U, Vpp, Vpm; sites=nothing, initial_psi=nothing, verbose
     psi0  = isnothing(initial_psi) ? initial_mps(sites) : initial_psi
     sw    = make_sweeps(150)
 
-    obs    = EnergyObserver(energy_tol=1e-8, min_sweeps=25)
+    obs    = EnergyObserver(energy_tol=1e-8, min_sweeps=20)
     eigsolve_krylovdim = 10
     @time E, psi = dmrg(H, psi0, sw; eigsolve_krylovdim, outputlevel=verbose ? 1 : 0, observer=obs)
     var =   variance_gs(H, psi)
