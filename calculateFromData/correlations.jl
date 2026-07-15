@@ -75,3 +75,33 @@ function compute_and_save_correlations(datafilename; blas_threads_per_task::Int=
     println("Saved correlation matrices to $outfile")
     return outfile
 end
+
+function loglog_fit(xv, yv)
+    lx = log10.(xv)
+    ly = log10.(yv)
+    A = hcat(lx, ones(length(lx)))  # design matrix [log10(x)  1]
+    coeffs = A \ ly                  # least squares solve
+    slope, intercept = coeffs[1], coeffs[2]
+    return slope, intercept
+end
+
+
+function load_correlations(datafilename)
+    corrfile = corr_output_filename(datafilename)
+    if !isfile(corrfile)
+        error("No correlation file found at $corrfile — did you download it?")
+    end
+
+    data = h5open(corrfile, "r") do f
+        (
+            szmat      = read(f["szmat"]),
+            chargemat  = read(f["chargemat"]),
+            spmmat     = read(f["spmmat"]),
+            elecupmat  = read(f["elecupmat"]),
+            elecdnmat  = read(f["elecdnmat"]),
+            sz_expect   = read(f["sz_expect"]),
+            ntot_expect = read(f["ntot_expect"]),
+        )
+    end
+    return data
+end

@@ -6,37 +6,7 @@ using LaTeXStrings
 using FFTW
 pyplot()
 
-include(joinpath(@__DIR__, "correlations.jl"))  # for corr_output_filename, filename_builder
-
-function loglog_fit(xv, yv)
-    lx = log10.(xv)
-    ly = log10.(yv)
-    A = hcat(lx, ones(length(lx)))  # design matrix [log10(x)  1]
-    coeffs = A \ ly                  # least squares solve
-    slope, intercept = coeffs[1], coeffs[2]
-    return slope, intercept
-end
-
-
-function load_correlations(datafilename)
-    corrfile = corr_output_filename(datafilename)
-    if !isfile(corrfile)
-        error("No correlation file found at $corrfile — did you download it?")
-    end
-
-    data = h5open(corrfile, "r") do f
-        (
-            szmat      = read(f["szmat"]),
-            chargemat  = read(f["chargemat"]),
-            spmmat     = read(f["spmmat"]),
-            elecupmat  = read(f["elecupmat"]),
-            elecdnmat  = read(f["elecdnmat"]),
-            sz_expect   = read(f["sz_expect"]),
-            ntot_expect = read(f["ntot_expect"]),
-        )
-    end
-    return data
-end
+include(joinpath(@__DIR__, "correlations.jl"))  # for corr_output_filename, filename_builder, load_correlations
 
 function plot_correlations(datafilename; site::Int, title_prefix="", nfit::Int=100)
     data = load_correlations(datafilename)
@@ -98,11 +68,11 @@ let
     N = 256
     U = 0.1
     Vpp = 0.8
-    dV = 3.2 #choices 3.2, 3.5, 3.55, 3.7
+    dV = 3.55 #choices 3.2, 3.5, 3.55, 3.7
     t = 1.0
     datafilename = filename_builder(N, t, U, Vpp, dV)
 
-    plot_correlations(datafilename; site=Int(N//4), title_prefix="N=$N, U=$U, Vpp=$Vpp, dV=$dV", nfit=50)
+    plot_correlations(datafilename; site=Int(N//2), title_prefix="N=$N, U=$U, Vpp=$Vpp, dV=$dV", nfit=50)
 end
 
 ##
@@ -114,7 +84,7 @@ let
     for N in (64, 128, 256)
         U = 0.1
         Vpp = 0.8
-        dV = 3.2 #choices 3.2, 3.5, 3.55, 3.7
+        dV = 3.8 #choices 3.2, 3.5, 3.55, 3.7
         t = 1.0
         datafilename = filename_builder(N, t, U, Vpp, dV)
 
@@ -125,9 +95,9 @@ let
         @show length(chargecorr_conn)
         dist = xvals .- site
         keep = dist .> 0
-        keep_neg = keep .& (chargecorr_conn .< 0)
+        keep_neg = keep #.& (chargecorr_conn .< 0)
         @show length(chargecorr_conn[keep_neg])
-        plot!(dist[keep_neg], -chargecorr_conn[keep_neg], marker=:circle, 
+        plot!(dist[keep_neg], abs.(-chargecorr_conn[keep_neg]), marker=:circle, 
         color=colordict[N], strokecolor=colordict[N], lw=2, ms=2, label="N=$N")
     end
     plot!(yscale=:log10, xscale=:log10)
@@ -148,7 +118,7 @@ let
     for N in (64, 128, 256)
         U = 0.1
         Vpp = 0.8
-        dV = 3.2 #choices 3.2, 3.5, 3.55, 3.7
+        dV = 3.9 #choices 3.2, 3.5, 3.55, 3.7
         t = 1.0
         datafilename = filename_builder(N, t, U, Vpp, dV)
 
@@ -157,12 +127,13 @@ let
         xvals = 1:N
         chargecorr_conn = data.chargemat[site, :] .- data.ntot_expect[site] .* data.ntot_expect
         spinzcorr_conn = data.szmat[site, :] .- data.sz_expect[site] .* data.sz_expect
-        spinpmcorr = data.spmmat[site, :]
-        chargecorr_conn = spinpmcorr
+        # spinpmcorr = data.spmmat[site, :]
+        # chargecorr_conn = spinpmcorr
+        # chargecorr_conn = spinzcorr_conn
         @show length(chargecorr_conn)
         dist = xvals .- site
         keep = dist .> 0
-        keep_neg = keep .& (chargecorr_conn .< 0)
+        keep_neg = keep #.& (chargecorr_conn .< 0)
         keep_neg_trunc = keep_neg .& (dist .< Int(N//4))
         fft_chargecorr = fft(chargecorr_conn)
         omega = 2π * (0:N-1) / N
@@ -172,8 +143,8 @@ let
         color=colordict[N], strokecolor=colordict[N], lw=2, ms=2, label="N=$N")
     end
     plot!(yscale=:linear, xscale=:linear)
-    # fitval = 0.21
-    fitval = 0.9/pi
+    fitval = 0.21
+    # fitval = 0.9/pi
     plot!(xlabel=raw"$k_n$", ylabel=raw"$ \mathcal{F}(\delta\rho(x)\delta\rho(N/2))$", title="Connected charge correlations", legendfontsize=12)
     plot!(omegaGlob, fitval .* omegaGlob, ls=:dash, lw=2, color=:black, label=label = L"$%$(fitval)\,\omega$")
     vline!([pi/2], ls=:dash, lw=2, color=:black, label=L"$\frac{\pi}{2}$")
@@ -271,7 +242,7 @@ let
     for N in (64, 128, 256)
         U = 0.1
         Vpp = 0.8
-        dV = 3.2 #choices 3.2, 3.5, 3.55, 3.7
+        dV = 3.9 #choices 3.2, 3.5, 3.55, 3.7, 3.9
         t = 1.0
         datafilename = filename_builder(N, t, U, Vpp, dV)
 
@@ -285,7 +256,7 @@ let
         @show length(chargecorr_conn)
         dist = xvals .- site
         keep = dist .> 0
-        keep_neg = keep .& (chargecorr_conn .< 0)
+        keep_neg = keep #.& (chargecorr_conn .< 0)
         keep_neg_trunc = keep_neg .& (dist .< Int(N//4))
         fft_chargecorr = fft(chargecorr_conn)
         omega = 2π * (0:N-1) / N
@@ -312,7 +283,7 @@ let
     for N in (64, 128, 256)
         U = 0.1
         Vpp = 0.8
-        dV = 3.2 #choices 3.2, 3.5, 3.55, 3.7
+        dV = 3.65 #choices 3.2, 3.5, 3.55, 3.7
         t = 1.0
         datafilename = filename_builder(N, t, U, Vpp, dV)
 
