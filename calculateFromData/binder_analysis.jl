@@ -38,15 +38,20 @@ let
     Vpp = 0.8
     t = 1.0
     dVlist = collect(3.2:0.05:3.9)          # must match the scan used in driver_moments.jl
-    Nlist = (16, 32, 64, 128, 256)
+    Nlist = (64, 128, 256)
 
     binder = Dict{Int,Vector{Float64}}()
     for N in Nlist
         blist = Float64[]
         for dV in dVlist
             datafilename = filename_builder(N, t, U, Vpp, dV)
-            data = load_moments(datafilename)     # cheap: just reads two scalars per file
-            push!(blist, binder_cumulant(data.m2, data.m4))
+            try 
+                data = load_moments(datafilename) 
+                push!(blist, binder_cumulant(data.m2, data.m4))    # cheap: just reads two scalars per file
+            catch e 
+                println(e)
+            end
+                
         end
         binder[N] = blist
     end
@@ -57,7 +62,7 @@ let
     end
     plot!(xlabel=L"\delta V", ylabel=L"U_L = 1 - \langle m^4\rangle / 3\langle m^2\rangle^2",
           title="Binder cumulant crossings", legend=:best)
-
+    plot!(ylims=(0,1.1))
     println("Pairwise crossings between adjacent sizes:")
     Nsorted = sort(collect(Nlist))
     all_crossings = Float64[]

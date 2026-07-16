@@ -42,13 +42,13 @@ def scanner_v1(dV_values=None, t=1.0, U=0.1, Vpp=0.8, hz=-1e-14, hx=0.0,
         'start_env': 20,
         'max_E_err': max_E_err,
         'max_S_err': max_S_err,
-        'mixer': False,
-        # "mixer": "DensityMatrixMixer",
-        # "mixer_params": {
-        #     "amplitude": 1e-3,
-        #     "decay": 1.2,
-        #     "disable_after": 10, 
-        # },
+        # 'mixer': False,
+        "mixer": "DensityMatrixMixer",
+        "mixer_params": {
+            "amplitude": 1e-2,
+            "decay": 1.2,
+            "disable_after": 100, 
+        },
     }
     model = HubbardSpinDepV(model_params)
 
