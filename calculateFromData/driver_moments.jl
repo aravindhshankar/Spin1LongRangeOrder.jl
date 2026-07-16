@@ -33,7 +33,7 @@ function main()
         blas_threads_per_task = parse(Int, get(ENV, "MKL_NUM_THREADS", "1"))
         try
             compute_and_save_moments(datafilename;
-                                      mpo_cutoff=1e-12,
+                                      mpo_cutoff=0.0,
                                       blas_threads_per_task=blas_threads_per_task)
         catch e
             println("ERROR processing $datafilename: $e")

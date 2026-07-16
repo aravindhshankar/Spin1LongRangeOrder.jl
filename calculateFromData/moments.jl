@@ -19,25 +19,8 @@ end
 
 """
     compute_and_save_moments(datafilename; mpo_cutoff=1e-12, blas_threads_per_task=1)
-
-Computes <M^2> and <M^4> where M = sum_i Sz_i is the total magnetization operator.
-
-IMPORTANT: this does NOT apply the M-MPO to psi (that would grow psi's bond dimension
-by up to 2x per application — up to 4x for M^2 — forcing a lossy truncation of an
-already-large state). Instead it computes the expectation values as an EXACT
-bra-MPO-ket sandwich, <psi|M^n|psi> = inner(psi, Mn_mpo, psi), which never touches
-psi's bond dimension at all. The only thing that needs to stay small is the MPO
-itself, and it does:
-  - M      has bond dimension 2  (sum of single-site terms)
-  - M^2 = M*M   is an exact MPO product, bond dimension <= 4
-  - M^4 = M^2*M^2 is an exact MPO product, bond dimension <= 16
-These are literal operator multiplications (M*M as full quantum operators), not term
-enumeration, so they correctly include all N^2 / N^4 cross terms (including i=j etc.)
-without ever building an N^2- or N^4-term OpSum. Cost of the final inner() sandwiches
-scales like N * chi_psi^2 * chi_MPO^2 — exact, no truncation error, no maxdim to tune.
-
 """
-function compute_and_save_moments(datafilename; mpo_cutoff::Float64=1e-12,
+function compute_and_save_moments(datafilename; mpo_cutoff::Float64=0.0,
                                    blas_threads_per_task::Int=1)
     outfile = moments_output_filename(datafilename)
 
@@ -63,15 +46,26 @@ function compute_and_save_moments(datafilename; mpo_cutoff::Float64=1e-12,
 
     # Exact MPO*MPO products — these are tiny (bond <=4, <=16) regardless of N,
     # since they're built by operator multiplication, not by enumerating terms.
-    M2mpo = apply(Mmpo, Mmpo; cutoff=mpo_cutoff)   # MPO-MPO multiply, bond <= 4
-    M4mpo = apply(M2mpo, M2mpo; cutoff=mpo_cutoff) # MPO-MPO multiply, bond <= 16
+    try
+        M2mpo = apply(Mmpo, Mmpo; cutoff=mpo_cutoff)   
+    catch e 
+        println("ERROR processing $datafilename: $e")
+        println("Defaulting to naive algorithm for tensor contraction in M2mpo")
+        M2mpo = apply(Mmpo, Mmpo; cutoff=0.0, alg="naive")
+    end
+    try 
+        M4mpo = apply(M2mpo, M2mpo; cutoff=mpo_cutoff)
+    catch e
+        println("ERROR processing $datafilename: $e")
+        println("Defaulting to naive algorithm for tensor contraction in M2mpo")
+        M4mpo = apply(M2mpo, M2mpo; cutoff=0.0, alg="naive")
+    end
     println("  built M^2 MPO (maxlinkdim=$(maxlinkdim(M2mpo))), " *
             "M^4 MPO (maxlinkdim=$(maxlinkdim(M4mpo)))")
 
-    # Exact sandwich contractions — psi's bond dimension is never modified/truncated.
     t0 = time()
-    m2_raw = inner(psi, M2mpo, psi)
-    m4_raw = inner(psi, M4mpo, psi)
+    m2_raw = inner(psi', M2mpo, psi)
+    m4_raw = inner(psi', M4mpo, psi)
     println(@sprintf("  <M^2>, <M^4> computed in %.1f s (chi_psi=%d)", time() - t0, maxlinkdim(psi)))
 
     m2 = m2_raw / N^2
