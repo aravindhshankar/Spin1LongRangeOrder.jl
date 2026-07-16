@@ -41,9 +41,9 @@ let
     # p = plot()
     p = scatter()
     Ndict = Dict()
-    beta = 1.0/2.8
-    nu = 7.0/12
-    gstar = 3.575
+    beta = 1.0/3.0 + 0.1
+    nu = 7.0/12 + 0.02
+    gstar = 3.535
     for N in Nlist
         magzlist = Float64[]
         for dV in dVlist
@@ -60,6 +60,13 @@ let
     scatter!(xlabel=L"(g-g_c)L^{1/\nu}")
     scatter!(ylabel=L"L^{\beta/\nu}m(g,L)")
     scatter!(title=L"g_c="*@sprintf("%.4f", gstar))
+    ltest=1000
+    densedVlist = range(3.51,3.64,length=1000)
+    xvals = @. (densedVlist - gstar) * (ltest ^ (1.0/nu))
+    filter = densedVlist .> gstar
+    yvals = @. 0.270*((densedVlist[densedVlist.>gstar] - gstar) ^ beta) * (ltest ^ (beta/nu))
+    plot!(xvals[filter], yvals)
+    plot!(xlims=(-2500,2500))
     display(p)
     # @show Ndict
 end
