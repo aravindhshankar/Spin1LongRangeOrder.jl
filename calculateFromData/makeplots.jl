@@ -4,12 +4,13 @@ using Polynomials
 using Printf
 using LaTeXStrings
 using FFTW
-pyplot()
+gr()
 
 include(joinpath(@__DIR__, "correlations.jl"))  # for corr_output_filename, filename_builder, load_correlations
 
 function plot_correlations(datafilename; site::Int, title_prefix="", nfit::Int=100)
     data = load_correlations(datafilename)
+    @show keys(data)
     N = size(data.szmat, 1)
     xvals = 1:N
 
@@ -40,7 +41,7 @@ function plot_correlations(datafilename; site::Int, title_prefix="", nfit::Int=1
 
         n_use = min(nfit, length(xv_pos))
         p = plot(xv, yv,
-            xscale=:log10, yscale=:log10,
+            xscale=:linear, yscale=:log10,
             xlabel="site - $site", ylabel="|correlation|",
             title=label, lw=2, ms=4, marker=:circle,
             label="data", legendfontsize=10)
@@ -68,7 +69,7 @@ let
     N = 256
     U = 0.1
     Vpp = 0.8
-    dV = 3.55 #choices 3.2, 3.5, 3.55, 3.7
+    dV = 3.25 #choices 3.2, 3.5, 3.55, 3.7
     t = 1.0
     datafilename = filename_builder(N, t, U, Vpp, dV)
 
@@ -118,7 +119,7 @@ let
     for N in (64, 128, 256)
         U = 0.1
         Vpp = 0.8
-        dV = 3.9 #choices 3.2, 3.5, 3.55, 3.7
+        dV = 3.4 #choices 3.2, 3.5, 3.55, 3.7
         t = 1.0
         datafilename = filename_builder(N, t, U, Vpp, dV)
 
@@ -127,14 +128,16 @@ let
         xvals = 1:N
         chargecorr_conn = data.chargemat[site, :] .- data.ntot_expect[site] .* data.ntot_expect
         spinzcorr_conn = data.szmat[site, :] .- data.sz_expect[site] .* data.sz_expect
+        electron_corr = 1 * (data.elecdnmat[site, :] ) 
         # spinpmcorr = data.spmmat[site, :]
         # chargecorr_conn = spinpmcorr
         # chargecorr_conn = spinzcorr_conn
+        chargecorr_conn = electron_corr
         @show length(chargecorr_conn)
         dist = xvals .- site
         keep = dist .> 0
         keep_neg = keep #.& (chargecorr_conn .< 0)
-        keep_neg_trunc = keep_neg .& (dist .< Int(N//4))
+        keep_neg_trunc = keep_neg #.& (dist .< Int(N//4))
         fft_chargecorr = fft(chargecorr_conn)
         omega = 2π * (0:N-1) / N
         # omega = 1:N-1
@@ -170,6 +173,9 @@ let
     chargecorr_conn = chargecorr[Int(N//2), :] .- expect(psi, "Ntot")[Int(N//2)] .* expect(psi, "Ntot")
     spinzcorr_conn = correlation_matrix(psi, "Sz", "Sz")[Int(N//2), :] .- expect(psi, "Sz")[Int(N//2)] .* expect(psi, "Sz")
     chargecorr_conn = spinzcorr_conn
+    # electron_corrdn = correlation_matrix(psi, "Cdagdn", "Cdn")[Int(N//2), :]
+    # electron_corrup = correlation_matrix(psi, "Cdagup", "Cup")[Int(N//2), :]
+    # chargecorr_conn = (electron_corrdn .+ electron_corrup)
     xvals = 1:N
 
     @show length(chargecorr_conn)
@@ -210,12 +216,15 @@ let
     chargecorr_conn = chargecorr[Int(N//2), :] .- expect(psi, "Ntot")[Int(N//2)] .* expect(psi, "Ntot")
     # spinzcorr_conn = correlation_matrix(psi, "Sz", "Sz")[Int(N//2), :] .- expect(psi, "Sz")[Int(N//2)] .* expect(psi, "Sz")
     # chargecorr_conn = spinzcorr_conn
+    electron_corrdn = correlation_matrix(psi, "Cdagdn", "Cdn")[Int(N//2), :]
+    electron_corrup = correlation_matrix(psi, "Cdagup", "Cup")[Int(N//2), :]
+    chargecorr_conn = (electron_corrdn .+ electron_corrup)
     xvals = 1:N
 
     @show length(chargecorr_conn)
     dist = xvals .- site
     keep = dist .> 0
-    keep_neg = keep .& (chargecorr_conn .< 0)
+    keep_neg = keep #.& (chargecorr_conn .< 0)
     keep_neg_trunc = keep_neg .& (dist .< Int(N//4))
 
     @show length(chargecorr_conn[keep_neg_trunc])
@@ -224,9 +233,11 @@ let
     
     plot!(yscale=:log, xscale=:log)
     fitval = 1.0/pi
+    fitval = 0.07
+    fitval = 0.5
     plot!(xlabel=raw"$x-\frac{N}{2}$", ylabel=raw"$| \delta\rho(x)\delta\rho(N/2)|$", title=L"Connected charge correlations Free fermions ($2k_F = \frac{\pi}{2}$)", legendfontsize=12)
-    plot!(maxdist, 0.07 * maxdist.^(-2), ls=:dash, lw=2, color=:black, label=raw"$\sim x^{-2}$")
-    
+    plot!(maxdist, abs.(fitval * sin.(0.25 *pi .* maxdist)) .* maxdist.^(-1), ls=:dash, lw=2, color=:black, label=raw"$\sim x^{-2}$")
+    plot!(ylims=[1e-3, 1])
 
 
 

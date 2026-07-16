@@ -46,19 +46,21 @@ function compute_and_save_moments(datafilename; mpo_cutoff::Float64=0.0,
 
     # Exact MPO*MPO products — these are tiny (bond <=4, <=16) regardless of N,
     # since they're built by operator multiplication, not by enumerating terms.
+    M2mpo = 
     try
-        M2mpo = apply(Mmpo, Mmpo; cutoff=mpo_cutoff)   
+        apply(Mmpo, Mmpo; cutoff=mpo_cutoff)   
     catch e 
         println("ERROR processing $datafilename: $e")
         println("Defaulting to naive algorithm for tensor contraction in M2mpo")
-        M2mpo = apply(Mmpo, Mmpo; cutoff=0.0, alg="naive")
+        apply(Mmpo, Mmpo; cutoff=0.0, alg="naive")
     end
+    M4mpo = 
     try 
-        M4mpo = apply(M2mpo, M2mpo; cutoff=mpo_cutoff)
+        apply(M2mpo, M2mpo; cutoff=mpo_cutoff)
     catch e
         println("ERROR processing $datafilename: $e")
         println("Defaulting to naive algorithm for tensor contraction in M2mpo")
-        M4mpo = apply(M2mpo, M2mpo; cutoff=0.0, alg="naive")
+        apply(M2mpo, M2mpo; cutoff=0.0, alg="naive")
     end
     println("  built M^2 MPO (maxlinkdim=$(maxlinkdim(M2mpo))), " *
             "M^4 MPO (maxlinkdim=$(maxlinkdim(M4mpo)))")
