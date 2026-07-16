@@ -203,8 +203,8 @@ function scan_deltaV(N=16, t=1.0, U=4.0, Vpp=0.5, Npart=7;
     @show vacrit
     
     if isnothing(startmps)
-        psi = initial_mps(sites, Npart=Npart)
         sites = siteinds("Electron", N; conserve_nf=true, conserve_sz=false)
+        psi = initial_mps(sites, Npart=Npart)
     else
         psi = startmps
         sites = siteinds(psi)
@@ -276,11 +276,12 @@ function main()
     dvreloadval = round(Vpmreloadval - Vpp, digits=3)
     loadfilename = filename_builder(N, t, U, Vpp, dvreloadval)
 
+    startmps=nothing
     try 
         println("-"^20, "loading from file", loadfilename, "-"^20)
         startmps = load_simulation(loadfilename)
         println("Load successful! Resuming simulation ...")
-    catch 
+    catch e
         startmps = Nothing
     end
     flush(stdout)
@@ -291,7 +292,7 @@ function main()
     # default dV vals : 3.2:0.05:4.2
     
     for Npart in this_job_nparts
-        scan_deltaV(N, t, U, Vpp, Npart; dV_range=start_dv_val:step:end_dv_val, startmps)
+        scan_deltaV(N, t, U, Vpp, Npart; dV_range=start_dv_val:step:end_dv_val, startmps=startmps)
         # scan_deltaV(N, t, U, Vpp, Npart; dV_range=3.3:-0.01:3.0)
     end #for
 end
