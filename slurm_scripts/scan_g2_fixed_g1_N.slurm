@@ -2,13 +2,13 @@
 #
 #SBATCH --job-name=FSS_diffN
 #SBATCH --partition=cmsp,long
-#SBATCH --array=1-6
+#SBATCH --array=4-7
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=6
+#SBATCH --cpus-per-task=8
 #SBATCH --mem=16G
-#SBATCH --time=22:00:00
+#SBATCH --time=23:30:00
 #SBATCH --output=logs/%x_%j.out
 #SBATCH --mail-user=ashankar@ictp.it
 #SBATCH --mail-type=ALL

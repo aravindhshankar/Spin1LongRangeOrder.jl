@@ -1,3 +1,5 @@
+using ThreadPinning
+pinthreads(:cores)
 using MKL
 using Spin1LongRangeOrder
 using Spin1LongRangeOrder.Hamiltonians
@@ -12,8 +14,9 @@ gr()
 const G1_FIXED = -0.2
 const VARIANCE_THRESHOLD = 1e-3
 const G2_VALUES = collect(0.1:0.01:0.35)
-const N_VALUES = [16, 32, 64, 100, 128, 256]
-const RESTART_G2_START = Dict(64 => 0.20, 100 => 0.18, 128 => 0.16, 256 => 0.15)  # e.g., Dict(16 => 0.25, 32 => 0.20) to restart from specific g2
+const N_VALUES = [16, 32, 64, 100, 128, 256, 512]
+# const RESTART_G2_START = Dict(64 => 0.20, 100 => 0.18, 128 => 0.16, 256 => 0.15)
+const RESTART_G2_START = Dict(100 => 0.27, 128 => 0.20, 256 => 0.17)   #first value to do, NOT last available mps
 
 const LINKDIM_START_THRESH = [0, 100, 400]
 const LINKDIM_UPPER_CAP = [220, 500, 800]
@@ -91,10 +94,12 @@ function run_g2_dmrg(sites, J, g1, g2, psi_init)
   max_bd = maximum([linkdim(psi_init, i) for i in 1:length(psi_init)-1])
   maxdim = build_maxdim_schedule(max_bd)
   mindim = [2]
-  eigsolve_krylovdim = 5
+  eigsolve_krylovdim = 10
   cutoff = [1E-12]
-  noise = [1E-3, 1E-4, 1E-5, 1E-6, 0]
-  observer = build_dmrg_observer()
+  # noise = [1E-3, 1E-4, 1E-5, 1E-6, 0]
+  noise = [1E-3, 1E-3, 1E-3, 1E-4, 1E-5, 1E-5, 1E-6, 1E-6, 1E-6, 0]
+  etol=1E-7
+  observer = build_dmrg_observer(etol)
 
   energy, psi = dmrg(H, psi_init; nsweeps, maxdim, cutoff, mindim,
     eigsolve_krylovdim, noise, observer)
@@ -146,7 +151,7 @@ function run_g2_scan_for_N(N, J, g1; start_g2=G2_VALUES[1])
       if psi_init === nothing
         psi_init = build_boundary_pinned_state(sites, J, g1, g2)
       else
-        psi_init = ITensorMPS.replace_siteinds(psi_init, sites)  # Align site indices if loaded from previous g2
+        psi_init = ITensorMPS.replace_siteinds(psi_init, sites)  # Align site indices if loaded from previous g2 --needs to be refactored
         # psi_init = Spin1LongRangeOrder.replace_siteinds(psi_init, sites) # Align site indices if loaded from previous g2
       end
     else
