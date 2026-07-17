@@ -12,13 +12,13 @@ gr()
 # ─── Sweep schedule ───────────────────────────────────────────────────────────
 function make_sweeps(max_sweeps=50)
     # Each entry: (maxdim, cutoff, noise)
-    # The schedule has 50 rows; bond dim and noise saturate after row 6.
     base = [
         ("maxdim", "cutoff", "noise"),  
-        fill((20,   1e-6,  1e-3), 2)...,
-        fill((50,   1e-8,  1e-4), 3)...,
-        fill((100,  1e-10, 1e-5), 5)...,
-        fill((200,  1e-12,  0.0), 5)...,
+        fill((20,   1e-6,  1e-3), 4)...,
+        fill((30,   1e-7,  1e-4), 5)...,
+        fill((50,   1e-8,  1e-5), 6)...,
+        fill((100,  1e-10, 1e-8), 6)...,
+        fill((200,  1e-12, 1e-12), 5)...,
         fill((400,  1e-12, 0.0), 10)...,
         (500,  1e-12, 0.0),
     ]
@@ -190,7 +190,7 @@ end
 
 # ─── Scan ΔV = V^{+-} - V^{++} to locate the FM transition ──────────────────
 function scan_deltaV(N=16, t=1.0, U=4.0, Vpp=0.5, Npart=7;
-                     dV_range=0.0:0.25:2.0, startmps=nothing)
+                     dV_range=0.0:0.25:2.0, startmps=nothing, verbose=true)
     println("\n", "="^65)
     println("Scanning ΔV = V^{+-} - V^{++} to locate FM transition")
     println("Fixed Npart = ", Npart)
@@ -217,7 +217,7 @@ function scan_deltaV(N=16, t=1.0, U=4.0, Vpp=0.5, Npart=7;
 
     for dV in dV_range
         Vpm              = Vpp + dV
-        E, psi, _, var   = run_dmrg(N, t, U, Vpp, Vpm; sites=sites, initial_psi=psi, verbose=false)
+        E, psi, _, var   = run_dmrg(N, t, U, Vpp, Vpm; sites=sites, initial_psi=psi, verbose=verbose)
         Sz               = expect(psi, "Sz")
         SzSz             = correlation_matrix(psi, "Sz", "Sz")
         Sq0              = sum(SzSz) / N
@@ -282,7 +282,7 @@ function main()
         startmps = load_simulation(loadfilename)
         println("Load successful! Resuming simulation ...")
     catch e
-        startmps = Nothing
+        startmps = nothing
     end
     flush(stdout)
 
@@ -291,8 +291,9 @@ function main()
     end_dv_val = 4.2
     # default dV vals : 3.2:0.05:4.2
     
+    verbose=true
     for Npart in this_job_nparts
-        scan_deltaV(N, t, U, Vpp, Npart; dV_range=start_dv_val:step:end_dv_val, startmps=startmps)
+        scan_deltaV(N, t, U, Vpp, Npart; dV_range=start_dv_val:step:end_dv_val, startmps=startmps, verbose=verbose)
         # scan_deltaV(N, t, U, Vpp, Npart; dV_range=3.3:-0.01:3.0)
     end #for
 end
