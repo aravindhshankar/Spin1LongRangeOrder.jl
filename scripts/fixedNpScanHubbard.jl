@@ -1,5 +1,3 @@
-using ThreadPinning
-pinthreads(:cores)
 using MKL
 using Spin1LongRangeOrder
 using ITensors, ITensorMPS
