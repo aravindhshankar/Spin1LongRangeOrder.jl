@@ -42,14 +42,28 @@ chi_max = chilist[task_id]
 n_sweeps = 1000
 max_err = (1e-7, 1e-5)
 
-loadfile = os.path.join(ROOTDIR, f'Vpm3.8cc/Vpm_3.800_chi{chi_max}.h5')
+restartditct = {
+    1200: 3.52,
+    1000: 3.53,
+    800: 3.55,
+}
+restrtartV = restartditct[chi_max]
+scanVlist = dVlist[(dVlist - restrtartV) > 1e-8] 
+
+loadfiledict = {
+    1200: 'scanChi1200/Vpm_4.320_chi1200.h5',
+    1000: 'scanChi1000/Vpm_4.330_chi1000.h5',
+    800: 'scanChi800/Vpm_4.350_chi800.h5',
+}
+loadfile = os.path.join(ROOTDIR, loadfiledict[chi_max])
+# loadfile = os.path.join(ROOTDIR, f'Vpm3.8cc/Vpm_3.800_chi{chi_max}.h5')
 psi_init, metadata_init = io.load_mps_with_metadata(loadfile)
 print("Loaded initial state from ", loadfile)
 
 print("STARTING scan_deltaV", flush=True)
 
 # scan_deltaV(t, U, Vpp, dVlist, chimax, nsweeps, max_err, saveflag=True, diagnostics=True, ROOTDIR=ROOTDIR)
-scanner_v1(dV_values=dVlist, chi_max=chi_max, hz=0.0, psi_init=psi_init,
+scanner_v1(dV_values=scanVlist, chi_max=chi_max, hz=0.0, psi_init=psi_init,
            n_sweeps=n_sweeps, max_err=max_err, saveflag=True, ROOTDIR=ROOTDIR)
 
 print("ENDED scan_deltaV", flush=True)
