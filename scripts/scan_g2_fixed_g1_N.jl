@@ -14,7 +14,7 @@ const VARIANCE_THRESHOLD = 1e-3
 const G2_VALUES = collect(0.1:0.01:0.35)
 const N_VALUES = [16, 32, 64, 100, 128, 256, 512]
 # const RESTART_G2_START = Dict(64 => 0.20, 100 => 0.18, 128 => 0.16, 256 => 0.15)
-const RESTART_G2_START = Dict(100 => 0.350, 128 => 0.21, 256 => 0.20)   #first value to do, NOT last available mps
+const RESTART_G2_START = Dict(100 => 0.350, 128 => 0.21, 256 => 0.20, 512 => 0.12)   #first value to do, NOT last available mps
 
 const LINKDIM_START_THRESH = [0, 100, 400]
 const LINKDIM_UPPER_CAP = [220, 500, 800]

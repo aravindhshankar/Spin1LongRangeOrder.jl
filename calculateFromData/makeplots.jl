@@ -212,20 +212,20 @@ let
     site = Int(N//2)
     datafilename = "FF_N32_Npart16_t1.0.h5"
     psi = load_simulation(datafilename)
-    chargecorr  = correlation_matrix(psi, "Ntot", "Ntot")
-    chargecorr_conn = chargecorr[Int(N//2), :] .- expect(psi, "Ntot")[Int(N//2)] .* expect(psi, "Ntot")
+    # chargecorr  = correlation_matrix(psi, "Ntot", "Ntot")
+    # chargecorr_conn = chargecorr[Int(N//2), :] .- expect(psi, "Ntot")[Int(N//2)] .* expect(psi, "Ntot")
     # spinzcorr_conn = correlation_matrix(psi, "Sz", "Sz")[Int(N//2), :] .- expect(psi, "Sz")[Int(N//2)] .* expect(psi, "Sz")
     # chargecorr_conn = spinzcorr_conn
-    electron_corrdn = correlation_matrix(psi, "Cdagdn", "Cdn")[Int(N//2), :]
-    electron_corrup = correlation_matrix(psi, "Cdagup", "Cup")[Int(N//2), :]
-    chargecorr_conn = (electron_corrdn .+ electron_corrup)
+    # electron_corrdn = correlation_matrix(psi, "Cdagdn", "Cdn")[Int(N//2), :]
+    # electron_corrup = correlation_matrix(psi, "Cdagup", "Cup")[Int(N//2), :]
+    chargecorr_conn = correlation_matrix(psi, "S+", "S-")[Int(N//2), :]
     xvals = 1:N
 
     @show length(chargecorr_conn)
     dist = xvals .- site
     keep = dist .> 0
     keep_neg = keep #.& (chargecorr_conn .< 0)
-    keep_neg_trunc = keep_neg .& (dist .< Int(N//4))
+    keep_neg_trunc = keep_neg #.& (dist .< Int(N//4))
 
     @show length(chargecorr_conn[keep_neg_trunc])
     plot!(dist[keep_neg][1:1:end], abs.(chargecorr_conn[keep_neg][1:1:end]), marker=:circle, 
@@ -234,10 +234,11 @@ let
     plot!(yscale=:log, xscale=:log)
     fitval = 1.0/pi
     fitval = 0.07
-    fitval = 0.5
+    fitval = 0.05
     plot!(xlabel=raw"$x-\frac{N}{2}$", ylabel=raw"$| \delta\rho(x)\delta\rho(N/2)|$", title=L"Connected charge correlations Free fermions ($2k_F = \frac{\pi}{2}$)", legendfontsize=12)
-    plot!(maxdist, abs.(fitval * sin.(0.25 *pi .* maxdist)) .* maxdist.^(-1), ls=:dash, lw=2, color=:black, label=raw"$\sim x^{-2}$")
-    plot!(ylims=[1e-3, 1])
+    plot!(maxdist, abs.(fitval * sin.(0.25 *pi .* maxdist)) .* maxdist.^(-2), ls=:dash, lw=2, color=:black, label=raw"$\sim x^{-2}$")
+    plot!(maxdist, abs.(fitval * maxdist.^(-2)), ls=:dash, lw=2, color=:black, label=raw"$\sim \sin(2k_F x) / x$")
+    plot!(ylims=[1e-7, 1])
 
 
 
