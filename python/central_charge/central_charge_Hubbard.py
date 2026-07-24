@@ -22,7 +22,8 @@ import sys, os
 sys.path.append('..')
 import utils.io as io
 
-ROOTDIR = '../../data/iDMRG/Vpm3.8cc/'
+# ROOTDIR = '../../data/iDMRG/Vpm3.8cc/'
+ROOTDIR = '../../data/iDMRG/Vpm4.8cc/'
 os.makedirs(ROOTDIR, exist_ok=True)
 
 class HubbardSpinDepV(CouplingMPOModel):
@@ -85,7 +86,8 @@ def example_DMRG_hubbard_infinite_S_xi_scaling(Vpm):
     M = HubbardSpinDepV(model_params)
     # psi, _  = io.load_mps_with_metadata("../../data/iDMRG/v2fwd/t_1.00_U_0.10_Vpp_0.800_consNf0_25_chimax_100/Vpm_3.8000_chimax_100.h5")
     # psi, _  = io.load_mps_with_metadata(f"./Vpm3.8chi80.h5")
-    psi, _ = io.load_mps_with_metadata(os.path.join(ROOTDIR, f"Vpm_{Vpm:.3f}_chi1000.h5"))
+    # psi, _ = io.load_mps_with_metadata(os.path.join(ROOTDIR, f"Vpm_{Vpm:.3f}_chi1000.h5"))
+    psi, = io.load_mps_with_metadata('../../data/iDMRG/scanChi500/Vpm_4.800_chi500.h5') #initial ferro state
     print("loaded intital psi, starting ...........", flush=True)
     psi.canonical_form_infinite2()
     dmrg_params = {
@@ -94,16 +96,16 @@ def example_DMRG_hubbard_infinite_S_xi_scaling(Vpm):
         'mixer' : True,
         'mixer_params': {'amplitude': 1e-2, 'decay': 1.2, 'disable_after': 100},
         # 'trunc_params': {'chi_max': 1098, 'svd_min': 1.0e-10},
-        'trunc_params': {'chi_max': 1098, 'svd_min': 1.0e-12},
+        'trunc_params': {'chi_max': 500, 'svd_min': 1.0e-12},
         'max_E_err': 1.0e-8, #was -7
-        'max_S_err': 1.0e-8, #was -7
+        'max_S_err': 1.0e-6, #was -7
         'update_env': 0,
     }
 
     # chi_list = np.arange(7, 31, 2)
     # chi_list = np.arange(80, 501, 20)
-    # chi_list = np.arange(550, 1001, 50)
-    chi_list = np.arange(1100, 2001, 100)
+    chi_list = np.arange(550, 1001, 50)
+    # chi_list = np.arange(1100, 2001, 100)
     s_list = []
     xi_list = []
     eng = dmrg.TwoSiteDMRGEngine(psi, M, dmrg_params)
@@ -179,6 +181,7 @@ if __name__ == '__main__':
     import logging
 
     logging.basicConfig(level=logging.INFO)
-    s_list, xi_list = example_DMRG_hubbard_infinite_S_xi_scaling(Vpm=3.8) #Deep in para phase 
+    # s_list, xi_list = example_DMRG_hubbard_infinite_S_xi_scaling(Vpm=3.8) #Deep in para phase 
+    s_list, xi_list = example_DMRG_hubbard_infinite_S_xi_scaling(Vpm=4.8)
     # fit_plot_central_charge(s_list, xi_list, 'central_charge_para80_300.pdf')
-    fit_plot_central_charge(s_list, xi_list, 'central_charge_para1000_2000.pdf')
+    fit_plot_central_charge(s_list, xi_list, 'central_charge_ferro500_100.pdf')

@@ -5,10 +5,10 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=6
-#SBATCH --array=0-1
-#SBATCH --mem=4G
-#SBATCH --time=20:00:00
+#SBATCH --cpus-per-task=8
+#SBATCH --array=1-1
+#SBATCH --mem=5G
+#SBATCH --time=23:00:00
 #SBATCH --output=logs/%x_%j.out
 
 mkdir -p logs
