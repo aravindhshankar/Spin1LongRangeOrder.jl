@@ -42,13 +42,13 @@ chi_max = chilist[task_id]
 n_sweeps = 1200
 max_err = (1e-7, 1e-5)
 
-restartditct = {
+restartdict = {
     100 : 5.9, 
     200 : 5.9,
 }
-restrtartV = restartditct[chi_max]
-scanVlist = dVlist[(dVlist - restrtartV) > 1e-8] 
-
+restrtartV = restartdict[chi_max]
+scanVlist = dVlist[(dVlist - restrtartV) < 1e-8] 
+print(scanVlist, flush=True)
 loadfiledict = {
     200 : 'Vpm6.0cc/Vpm_6.000_chi200.h5',
     100 : 'Vpm6.0cc/Vpm_6.000_chi100.h5'
