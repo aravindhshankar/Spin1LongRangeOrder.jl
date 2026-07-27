@@ -18,12 +18,13 @@ export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
 
 source ../.venv/bin/activate # venv is in python root 
 
-files=(
-    "freeFermion_cc.py"
-    "central_charge_Hubbard.py"
-)
-echo " running file ${files[$SLURM_ARRAY_TASK_ID]}"
+#files=(
+#    "freeFermion_cc.py"
+#    "central_charge_Hubbard.py"
+#)
+#echo " running file ${files[$SLURM_ARRAY_TASK_ID]}"
 echo "------------------iDMRG started--------------------"
-python3 "${files[$SLURM_ARRAY_TASK_ID]}"
+#python3 "${files[$SLURM_ARRAY_TASK_ID]}"
+python3 fm_central_charge.py
 echo "------------------iDMRG ended--------------------"
 echo "FINISHED, exiting slurm"
