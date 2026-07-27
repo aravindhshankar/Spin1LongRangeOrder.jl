@@ -95,7 +95,7 @@ class HubbardSpinDepV(CouplingMPOModel):
 
 
 # ─── iDMRG ───────────────────────────────────────────────────────────────────
-def run_idmrg(t=1.0, U=4.0, Vpp=0.5, Vpm=1.5, chi_max=100, n_sweeps=12, max_err=1e-5,
+def run_idmrg(t=1.0, U=4.0, Vpp=0.5, Vpm=1.5, chi_max=100, n_sweeps=12, hx=0.0, hz=0.0, max_err=1e-5, L=4,
               verbose=True, psi_init=None, diagnostics=False):
     """
     Run iDMRG for HubbardSpinDepV in the thermodynamic limit.
@@ -131,14 +131,17 @@ def run_idmrg(t=1.0, U=4.0, Vpp=0.5, Vpm=1.5, chi_max=100, n_sweeps=12, max_err=
         'max_S_err': max_err, #precision in entropy
     }
     model_params = dict(
-        t=t, U=U, Vpp=Vpp, Vpm=Vpm, mu=0.0,
+        t=t, U=U, Vpp=Vpp, Vpm=Vpm, mu=0.0, hx=hx, hz=hz,
         bc_MPS="infinite",
-        L=2, cons_N="N", cons_Sz="None",
+        L=L, cons_N="N", cons_Sz="None",
     )
     model = HubbardSpinDepV(model_params)
     if not psi_init:
         # Quarter-filling, Sz=N/2 initial state
-        psi = MPS.from_product_state(model.lat.mps_sites(), ["up", "empty"] , bc=model.lat.bc_MPS)
+        if L == 2 :
+            psi = MPS.from_product_state(model.lat.mps_sites(), ["up", "empty"] , bc=model.lat.bc_MPS)
+        elif L == 4:
+            psi = MPS.from_product_state(model.lat.mps_sites(), ["up", "empty", "up", "empty"] , bc=model.lat.bc_MPS)
     else : 
         psi = psi_init
         chi_init = max(psi.chi)
