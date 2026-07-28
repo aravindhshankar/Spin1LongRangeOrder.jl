@@ -78,7 +78,7 @@ class HubbardSpinDepV(CouplingMPOModel):
             self.add_onsite(-mu, 0, "Ntot")
 
 def example_DMRG_hubbard_infinite_S_xi_scaling(Vpm):
-    ROOTDIR = '../../data/iDMRG/Vpm{Vpm:.3f}cc/'
+    ROOTDIR = f'../../data/iDMRG/Vpm{Vpm:.3f}cc/'
     os.makedirs(ROOTDIR, exist_ok=True)
     model_params = dict(
         t=1.0, U=0.1, Vpp=0.8, Vpm=Vpm, mu=0.0, hx=0.0, hz=-1e-10,
