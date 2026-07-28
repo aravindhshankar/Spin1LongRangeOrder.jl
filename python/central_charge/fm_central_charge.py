@@ -23,8 +23,8 @@ sys.path.append('..')
 import utils.io as io
 
 # ROOTDIR = '../../data/iDMRG/Vpm3.8cc/'
-ROOTDIR = '../../data/iDMRG/Vpm6.0cc/'
-os.makedirs(ROOTDIR, exist_ok=True)
+# ROOTDIR = '../../data/iDMRG/Vpm6.0cc/'
+# os.makedirs(ROOTDIR, exist_ok=True)
 
 class HubbardSpinDepV(CouplingMPOModel):
     """
@@ -78,6 +78,8 @@ class HubbardSpinDepV(CouplingMPOModel):
             self.add_onsite(-mu, 0, "Ntot")
 
 def example_DMRG_hubbard_infinite_S_xi_scaling(Vpm):
+    ROOTDIR = '../../data/iDMRG/Vpm{Vpm:.3f}cc/'
+    os.makedirs(ROOTDIR, exist_ok=True)
     model_params = dict(
         t=1.0, U=0.1, Vpp=0.8, Vpm=Vpm, mu=0.0, hx=0.0, hz=-1e-10,
         bc_MPS="infinite",
@@ -88,7 +90,8 @@ def example_DMRG_hubbard_infinite_S_xi_scaling(Vpm):
     # psi, _  = io.load_mps_with_metadata(f"./Vpm3.8chi80.h5")
     # psi, _ = io.load_mps_with_metadata(os.path.join(ROOTDIR, f"Vpm_{Vpm:.3f}_chi1000.h5"))
     # psi, = io.load_mps_with_metadata('../../data/iDMRG/scanChi500/Vpm_4.800_chi500.h5') #initial ferro state
-    psi, _ = io.load_mps_with_metadata('Vpm_6.000_chi_100.h5')
+    # psi, _ = io.load_mps_with_metadata('Vpm_6.000_chi_100.h5')
+    psi, _ = io.load_mps_with_metadata(f'../../data/iDMRG/rev/scanChi200/Vpm_{Vpm:.3f}_chi200.h5')
     print("loaded intital psi, starting ...........", flush=True)
     psi.canonical_form_infinite2()
     dmrg_params = {
@@ -97,7 +100,7 @@ def example_DMRG_hubbard_infinite_S_xi_scaling(Vpm):
         'mixer' : True,
         'mixer_params': {'amplitude': 1e-2, 'decay': 1.2, 'disable_after': 100},
         # 'trunc_params': {'chi_max': 1098, 'svd_min': 1.0e-10},
-        'trunc_params': {'chi_max': 100, 'svd_min': 1.0e-12},
+        'trunc_params': {'chi_max': 200, 'svd_min': 1.0e-12},
         'max_E_err': 1.0e-8, #was -7
         'max_S_err': 1.0e-5, #was -7
         'update_env': 0,
@@ -105,7 +108,7 @@ def example_DMRG_hubbard_infinite_S_xi_scaling(Vpm):
 
     # chi_list = np.arange(7, 31, 2)
     # chi_list = np.arange(80, 501, 20)
-    chi_list = np.arange(120, 501, 20)
+    chi_list = np.arange(200, 501, 20)
     # chi_list = np.arange(1100, 2001, 100)
     s_list = []
     xi_list = []
@@ -180,9 +183,12 @@ def fit_plot_central_charge(s_list, xi_list, filename):
 
 if __name__ == '__main__':
     import logging
-
     logging.basicConfig(level=logging.INFO)
     # s_list, xi_list = example_DMRG_hubbard_infinite_S_xi_scaling(Vpm=3.8) #Deep in para phase 
-    s_list, xi_list = example_DMRG_hubbard_infinite_S_xi_scaling(Vpm=6.0)
+    Vpm_list = (4.30, 4.35, 4.4, 4.5, 4.6)
+    idx = int(os.getenv("SLURM_ARRAY_TASK_ID", 1))
+    Vpm = Vpm_list[idx]
+    print("SLURM ARRAY TASK : ", idx, " Vpm = ", Vpm, flush=True)
+    s_list, xi_list = example_DMRG_hubbard_infinite_S_xi_scaling(Vpm=Vpm)
     # fit_plot_central_charge(s_list, xi_list, 'central_charge_para80_300.pdf')
-    fit_plot_central_charge(s_list, xi_list, 'central_charge_fm6cc.pdf')
+    fit_plot_central_charge(s_list, xi_list, f'central_charge_fm_Vpm_{Vpm:.3f}_cc.pdf')

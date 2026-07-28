@@ -40,9 +40,6 @@ def electron_corr(psi, length=10, whichspin="tot"):
     return electron_corr_fn
 
 
-
-import numpy as np
-
 def denoise_rolling(y, window=10):
     """
     Smooth a 1D signal using a centered rolling average.
