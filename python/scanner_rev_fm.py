@@ -16,7 +16,9 @@ import utils.io as io
 vals = np.concatenate([
     np.arange(5.9, 4.2, -0.1),          # up to 3.3
     np.arange(4.2, 3.7, -0.05),         # 3.40 ... 3.59
-    np.arange(3.7, 3.50 ,-0.01),        # 3.6 ... 5.0
+    np.arange(3.7, 3.57 ,-0.01),        # 3.6 ... 5.0
+    np.arange(3.57, 3.54, -0.001),
+    np.arange(3.54, 3.50, -0.01),
 ])
 
 vals = np.unique(np.round(vals, 2))[::-1]
@@ -37,21 +39,27 @@ if not os.path.exists(ROOTDIR):
 # os.makedirs(JOBDIR, exist_ok=True)
 
 task_id = int(os.getenv("SLURM_ARRAY_TASK_ID"))
-chilist = [100, 200]
+chilist = [100, 200, 400]
 chi_max = chilist[task_id]
 n_sweeps = 1200
 max_err = (1e-7, 1e-5)
 
 restartdict = {
     100 : 5.9, 
-    200 : 5.9,
+    200 : 4.4,
+    400 : 5.9,
 }
 restrtartV = restartdict[chi_max]
 scanVlist = dVlist[(dVlist - restrtartV) < 1e-8] 
 print(scanVlist, flush=True)
+# loadfiledict = {
+#     200 : 'Vpm6.0cc/Vpm_6.000_chi200.h5',
+#     100 : 'Vpm6.0cc/Vpm_6.000_chi100.h5'
+# }
 loadfiledict = {
-    200 : 'Vpm6.0cc/Vpm_6.000_chi200.h5',
-    100 : 'Vpm6.0cc/Vpm_6.000_chi100.h5'
+    400 : 'Vpm6.0cc/Vpm_6.000_chi400.h5',
+    200 : 'rev/scanChi200/Vpm_4.400_chi200.h5', 
+    100 : 'Vpm6.0cc/Vpm_6.000_chi_100.h5',
 }
 loadfile = os.path.join(ROOTDIR, loadfiledict[chi_max])
 # loadfile = os.path.join(ROOTDIR, f'Vpm3.8cc/Vpm_3.800_chi{chi_max}.h5')
@@ -62,6 +70,6 @@ print("STARTING scan_deltaV", flush=True)
 
 # scan_deltaV(t, U, Vpp, dVlist, chimax, nsweeps, max_err, saveflag=True, diagnostics=True, ROOTDIR=ROOTDIR)
 scanner_v1(dV_values=scanVlist, chi_max=chi_max, hz=-1e-10, psi_init=psi_init,
-           n_sweeps=n_sweeps, max_err=max_err, saveflag=True, ROOTDIR=os.path.join(ROOTDIR, 'rev/'))
+           n_sweeps=n_sweeps, max_err=max_err, saveflag=True, ROOTDIR=os.path.join(ROOTDIR, 'rev/'), skipflag=True)
 
 print("ENDED scan_deltaV", flush=True)

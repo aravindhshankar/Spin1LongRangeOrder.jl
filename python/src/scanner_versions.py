@@ -15,7 +15,7 @@ from .consNfextendedHubbard import HubbardSpinDepV
 
 def scanner_v1(dV_values=None, t=1.0, U=0.1, Vpp=0.8, hz=-1e-14, hx=0.0,
                chi_max=1000, n_sweeps=1000, max_err=1e-7, 
-               saveflag=True, psi_init=None, ROOTDIR='../../data/iDMRG/'):
+               saveflag=True, psi_init=None, ROOTDIR='../../data/iDMRG/', skipflag=True):
     try : 
         max_E_err, max_S_err = max_err
     except (TypeError, ValueError):
@@ -59,6 +59,12 @@ def scanner_v1(dV_values=None, t=1.0, U=0.1, Vpp=0.8, hz=-1e-14, hx=0.0,
         print('-' * 80)
         print(f'{Vpm=:.4f}')
         print('-' * 80)
+        savefilename = os.path.join(JOBDIR, f"Vpm_{Vpm:.3f}_chi{chi_max}.h5")
+        if skipflag : 
+            if os.path.exists(savefilename):
+                print("file ", savefilename, " already exists, Skipping ...")
+                # TODO : modify the engine psi with the loaded psi
+                continue
         model_params['Vpm'] = Vpm
         model = HubbardSpinDepV(model_params)
         engine.reset_stats() #strictly not needed, but we use a safety precaution
@@ -75,7 +81,7 @@ def scanner_v1(dV_values=None, t=1.0, U=0.1, Vpp=0.8, hz=-1e-14, hx=0.0,
                 "model_params" : model_params, 
                 "dmrg_params" : dmrg_params,
             }
-            io.save_mps_with_metadata(os.path.join(JOBDIR, f"Vpm_{Vpm:.3f}_chi{chi_max}.h5"), psi, results)
+            io.save_mps_with_metadata(savefilename, psi, results)
     print(corr_length)
     print("FINISHED scanner_v1", flush=True)
 
