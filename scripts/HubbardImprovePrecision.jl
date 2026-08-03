@@ -218,7 +218,7 @@ function filename_builder(N, t, U, Vpp, dV; prefix="data/Hubbard/", makepath=fal
     Vpm = Vpp + dV
     Npart = Int(N // 2)
     _ = t # not used, so we discard, but leave the API as is for the future
-    datasavedir = joinpath(prefix, "N$N", "consNf/")
+    datasavedir = joinpath(prefix, "N$N"*"consNf/")
     makepath && mkpath(datasavedir)
     datafilename = datasavedir * "N$N" * "_U" * @sprintf("%.3f", U) * "_Vpp" * @sprintf("%.3f", Vpp) * "_Vpm" * @sprintf("%.3f", Vpm) * "_Np$Npart" * raw".h5"
     return datafilename
