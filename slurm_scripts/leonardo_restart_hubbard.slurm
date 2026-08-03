@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=restartHubbard
 #SBATCH --output=logs/resHub_%A_%a.out
-#SBATCH --array=0-32
+#SBATCH --array=1-33
 #SBATCH --time=23:00:00
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=6
