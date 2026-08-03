@@ -32,10 +32,10 @@ function make_restart_sweeps(initial_maxdim; max_sweeps=30)
     schedule = [
         ("maxdim", "cutoff", "noise"),
 
-        fill((initial_maxdim, 1e-9, 1e-2), 3)...,
-        fill((d2,             1e-10, 1e-3), 4)...,
-        fill((d3,             1e-10, 1e-5), 4)...,
-        fill((target,         1e-11, 1e-7), 4)...,
+        fill((initial_maxdim, 1e-9, 1e-3), 3)...,
+        fill((d2,             1e-10, 1e-4), 3)...,
+        fill((d3,             1e-10, 1e-6), 2)...,
+        fill((target,         1e-11, 1e-8), 2)...,
         fill((target,         1e-11, 0.0), max(5, max_sweeps - 18))...,
     ]
 
@@ -68,8 +68,9 @@ function ITensorMPS.checkdone!(obs::EnergyObserver; energy, sweep, kwargs...)
     return converged
 end
 
+##
 # ─── Build MPO ────────────────────────────────────────────────────────────────
-function build_hamiltonian(sites, t, U, Vpp, Vpm)
+function build_hamiltonian(sites, t, U, Vpp, Vpm, hzbdy=0.0, hzbulk=0.0)
     N  = length(sites)
     os = OpSum()
 
@@ -90,13 +91,19 @@ function build_hamiltonian(sites, t, U, Vpp, Vpm)
 
         # On-site Hubbard U
         os += U, "Nupdn", i
+
+        #hz bulk field
+        os += hzbulk, "Sz", i
     end
 
     os += U, "Nupdn", N  # On-site U for the last site
+    os += hzbulk, "Sz", N  # Bulk field for the last site
+    os += hzbdy, "Sz", N  # Boundary field for the last site
+    os += hzbdy, "Sz", 1  # Boundary field for the first site
 
     return MPO(os, sites)
 end
-
+##
 # ─── Initial MPS (alternating ↑↓, half filling) ──────────────────────────────
 function initial_mps(sites; Npart=nothing)
     N     = length(sites)
@@ -127,15 +134,15 @@ end
 
 # ─── Run a single DMRG calculation ───────────────────────────────────────────
 # WARNING! careful while using the sites object
-function run_dmrg(N, t, U, Vpp, Vpm; init_dim=nothing, sites=nothing, initial_psi=nothing, verbose=true)
+function run_dmrg(N, t, U, Vpp, Vpm, hzbdy=0.0, hzbulk=0.0; init_dim=nothing, sites=nothing, initial_psi=nothing, verbose=true)
     sites = isnothing(sites) ? siteinds("Electron", N; conserve_nf=true, conserve_sz=false) : sites
     # sites = siteinds("Electron", N; conserve_qns=true)
-    H     = build_hamiltonian(sites, t, U, Vpp, Vpm)
+    H     = build_hamiltonian(sites, t, U, Vpp, Vpm, hzbdy, hzbulk)
     psi0  = isnothing(initial_psi) ? initial_mps(sites) : initial_psi
     # sw    = make_sweeps(50)
     sw = make_restart_sweeps(init_dim; max_sweeps=30)
 
-    obs    = EnergyObserver(energy_tol=1e-5, min_sweeps=15)
+    obs    = EnergyObserver(energy_tol=1e-5, min_sweeps=10)
     eigsolve_krylovdim = 10
     @time E, psi = dmrg(H, psi0, sw; eigsolve_krylovdim, outputlevel=verbose ? 1 : 0, observer=obs)
     var =   variance_gs(H, psi)
@@ -207,18 +214,19 @@ end
 
 
 ##
-function filename_builder(N, t, U, Vpp, dV)
+function filename_builder(N, t, U, Vpp, dV; prefix="data/Hubbard/", makepath=false)
     Vpm = Vpp + dV
     Npart = Int(N // 2)
     _ = t # not used, so we discard, but leave the API as is for the future
-    datasavedir = "data/Hubbard/N$N" * "consNf/"
+    datasavedir = joinpath(prefix, "N$N", "consNf/")
+    makepath && mkpath(datasavedir)
     datafilename = datasavedir * "N$N" * "_U" * @sprintf("%.3f", U) * "_Vpp" * @sprintf("%.3f", Vpp) * "_Vpm" * @sprintf("%.3f", Vpm) * "_Np$Npart" * raw".h5"
     return datafilename
 end
 ##
 # ─── Main ────────────────────────────────────────────────────────────────────
 function main()
-    Nlist = (64, 128, 256)
+    Nlist = (128, 256)
     idx = (haskey(ENV, "SLURM_ARRAY_TASK_ID") ? parse(Int, ENV["SLURM_ARRAY_TASK_ID"]) : 1)
     total_tasks = (haskey(ENV, "SLURM_ARRAY_TASK_COUNT") ? parse(Int, ENV["SLURM_ARRAY_TASK_COUNT"]) : 1)
     t   = 1.0
@@ -228,7 +236,7 @@ function main()
     # allfilenames = collect(Iterators.flatten([joinpath.("data/Hubbard/N$nval" * "consNf/", readdir("data/Hubbard/N$nval" * "consNf/")) for nval in Nlist]))
     allfilenames = String[]
     for N in Nlist 
-        for dV in 3.4:0.05:3.9
+        for dV in 3.4:0.05:3.8
             this_file = filename_builder(N, t, U, Vpp, dV)
             if isfile(this_file)
                 push!(allfilenames, this_file)
@@ -261,7 +269,9 @@ function main()
             continue
         end
         N = length(psi)
-        E, psi, _, var = run_dmrg(N, t, U, Vpp, Vpm; init_dim=linkdim_init, sites=siteinds(psi), initial_psi=psi, verbose=true)
+        hzbdy = 0.0
+        hzbulk = 1e-10
+        E, psi, _, var = run_dmrg(N, t, U, Vpp, Vpm, hzbdy, hzbulk; init_dim=linkdim_init, sites=siteinds(psi), initial_psi=psi, verbose=true)
         println("New energy: $E, variance: $var")
         if E < E_init && var < var_init
             println("Vpm = $Vpm")
@@ -276,8 +286,9 @@ function main()
             # total_szbyN      = total_Sz / N
             params["totalSz"] = total_Sz
             params["Sqzero"]  = Sq0
-            save_simulation(datafilename, psi, params)
-            println("Saved new MPS to filename : $datafilename")
+            savefilename = filename_builder(N, t, U, Vpp, Vpm; prefix="data/Hubbard/ImpPrec/", makepath=true)
+            save_simulation(savefilename, psi, params)
+            println("Saved new MPS to filename : $savefilename")
         else
             println("No improvement in energy AND variance. Not saving.")
         end
