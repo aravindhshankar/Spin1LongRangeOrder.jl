@@ -246,7 +246,7 @@ function main()
     this_job_filenames = get_chunk(allfilenames, idx, total_tasks)
     @show this_job_filenames
 
-    for datafilename in this_job_filenames[1:1]
+    for datafilename in this_job_filenames[2:2]
         println("\n" * "="^80)
         println("Processing file: $datafilename")
         psi, params = nothing, nothing 
@@ -286,7 +286,7 @@ function main()
             # total_szbyN      = total_Sz / N
             params["totalSz"] = total_Sz
             params["Sqzero"]  = Sq0
-            savefilename = filename_builder(N, t, U, Vpp, Vpm; prefix="data/Hubbard/ImpPrec/", makepath=true)
+            savefilename = filename_builder(N, t, U, Vpp, Vpm-Vpp; prefix="data/Hubbard/ImpPrec/", makepath=true)
             save_simulation(savefilename, psi, params)
             println("Saved new MPS to filename : $savefilename")
         else
