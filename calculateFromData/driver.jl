@@ -2,11 +2,16 @@ include(joinpath(@__DIR__, "correlations.jl"))
 
 function all_datafiles()
     files = String[]
-    for N in [256]
+    for N in [16,32,64,128,256]
         for U in [0.1]
             for Vpp in [0.8]
-                for dV in [3.2, 3.50, 3.55, 3.7, 3.9]         # extend as needed, e.g. dV in 0.5:0.5:5.0
-                    push!(files, filename_builder(N, 1.0, U, Vpp, dV))
+                for dV in 3.2:0.05:4.0  
+                    for prefix in ["data/Hubbard/", "data/Hubbard/ImpPrec/"]
+                        filename = filename_builder(N, 1.0, U, Vpp, dV; prefix=prefix, makepath=false)       # extend as needed, e.g. dV in 0.5:0.5:5.0
+                        if isfile(filename)
+                            push!(files, filename)
+                        end
+                    end
                 end
             end
         end
@@ -32,7 +37,7 @@ function main()
         println("---- Task $task_id processing $datafilename ----")
         blas_threads_per_task = parse(Int, get(ENV, "MKL_NUM_THREADS", "1"))
         try
-            compute_and_save_correlations(datafilename; blas_threads_per_task=blas_threads_per_task)
+            compute_and_save_correlations(datafilename; blas_threads_per_task=blas_threads_per_task, skipout=false)
         catch e
             println("ERROR processing $datafilename: $e")
             # continue to next file rather than killing the whole array task
