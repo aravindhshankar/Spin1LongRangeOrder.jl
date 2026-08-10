@@ -62,3 +62,28 @@ def denoise_rolling(y, window=10):
     y_smooth = np.convolve(y_padded, kernel, mode='valid')
 
     return y_smooth.tolist()
+
+import numpy as np
+
+def op_correlation_idmrg(psi, opA=("Sp", "Sp"), opAdag=("Sm", "Sm"),
+                          i0=0, xs=None, autoJW=True, connected=False):
+    L = psi.L
+    if xs is None:
+        xs = np.arange(1, 10 * L)
+    xs = np.asarray(xs)
+
+    term_Odag = [(opAdag[0], i0 + 1), (opAdag[1], i0)]   # O_dag(i0)
+
+    corr = np.zeros(len(xs), dtype=complex)
+    for k, x in enumerate(xs):
+        term_O = [(opA[0], i0 + x), (opA[1], i0 + x + 1)]   # O(i0+x)
+        term = term_O + term_Odag                            # product, left-to-right = operator order
+        val = psi.expectation_value_term(term, autoJW=autoJW)
+        corr[k] = val
+
+    if connected:
+        O_val = psi.expectation_value_term([(opA[0], i0), (opA[1], i0 + 1)], autoJW=autoJW)
+        Odag_val = psi.expectation_value_term(term_Odag, autoJW=autoJW)
+        corr = corr - O_val * Odag_val
+
+    return xs, corr
