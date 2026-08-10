@@ -12,13 +12,19 @@ function filename_builder(N, g1, g2)
     return filename
 end
 
-function corr_output_filename(datafilename)
-    _, fname = splitdir(datafilename)
-    outdir = joinpath("data", "Spin1corrs")
-    mkpath(outdir)
+function corr_output_filename(datafilename; makepath::Bool=true)
+    dirtree, fname = splitdir(datafilename)
+    @show dirtree
+    dirname = splitdir(dirtree)[2]  # e.g. "N16"
+    @show dirname
+    @assert startswith(dirname, "N")
+    N = parse(Int, replace(dirname, "N" => ""))
+    @show N
+    @assert isfile(datafilename)
+    outdir = joinpath("data", "Spin1corrs", "N$(N)")
+    makepath && mkpath(outdir)
     return joinpath(outdir, replace(fname, ".h5" => "_corrs.h5"))
 end
-
 
 function compute_and_save_correlations(datafilename; blas_threads_per_task::Int=1)
     outfile = corr_output_filename(datafilename)
