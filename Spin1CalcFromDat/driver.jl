@@ -2,11 +2,12 @@ include(joinpath(@__DIR__, "correlations.jl"))
 
 function all_datafiles()
     files = String[]
-    for N in [256]
-        for U in [0.1]
-            for Vpp in [0.8]
-                for dV in [3.2, 3.50, 3.55, 3.7, 3.9]         # extend as needed, e.g. dV in 0.5:0.5:5.0
-                    push!(files, filename_builder(N, 1.0, U, Vpp, dV))
+    for N in [16, 32, 64, 100, 128, 256, 512]
+        for g1 in [-0.2]
+            for g2 in collect(0.1:0.01:0.35)
+                datafile = filename_builder(N, g1, g2)
+                if isfile(datafile)
+                    push!(files, datafile)
                 end
             end
         end

@@ -119,7 +119,7 @@ let
     for N in (64, 128, 256)
         U = 0.1
         Vpp = 0.8
-        dV = 3.4 #choices 3.2, 3.5, 3.55, 3.7
+        dV = 3.2 #choices 3.2, 3.5, 3.55, 3.7
         t = 1.0
         datafilename = filename_builder(N, t, U, Vpp, dV)
 
@@ -131,8 +131,8 @@ let
         electron_corr = 1 * (data.elecdnmat[site, :] ) 
         # spinpmcorr = data.spmmat[site, :]
         # chargecorr_conn = spinpmcorr
-        # chargecorr_conn = spinzcorr_conn
-        chargecorr_conn = electron_corr
+        chargecorr_conn = spinzcorr_conn
+        # chargecorr_conn = electron_corr
         @show length(chargecorr_conn)
         dist = xvals .- site
         keep = dist .> 0
@@ -146,8 +146,8 @@ let
         color=colordict[N], strokecolor=colordict[N], lw=2, ms=2, label="N=$N")
     end
     plot!(yscale=:linear, xscale=:linear)
-    fitval = 0.21
-    # fitval = 0.9/pi
+    # fitval = 0.21
+    fitval = 4.1/(4.0 * pi)
     plot!(xlabel=raw"$k_n$", ylabel=raw"$ \mathcal{F}(\delta\rho(x)\delta\rho(N/2))$", title="Connected charge correlations", legendfontsize=12)
     plot!(omegaGlob, fitval .* omegaGlob, ls=:dash, lw=2, color=:black, label=label = L"$%$(fitval)\,\omega$")
     vline!([pi/2], ls=:dash, lw=2, color=:black, label=L"$\frac{\pi}{2}$")
@@ -261,10 +261,11 @@ let
         data = load_correlations(datafilename)
         site = Int(N//2)
         xvals = 1:N
-        chargecorr_conn = data.chargemat[site, :] .- data.ntot_expect[site] .* data.ntot_expect
-        spinzcorr_conn = data.szmat[site, :] .- data.sz_expect[site] .* data.sz_expect
-        spinpmcorr = data.spmmat[site, :]
-        chargecorr_conn = spinpmcorr
+        # chargecorr_conn = data.chargemat[site, :] .- data.ntot_expect[site] .* data.ntot_expect
+        # spinzcorr_conn = data.szmat[site, :] .- data.sz_expect[site] .* data.sz_expect
+        # spinpmcorr = data.spmmat[site, :]
+        # chargecorr_conn = spinpmcorr
+        chargecorr_conn = data.elecdnmat[site,:]
         @show length(chargecorr_conn)
         dist = xvals .- site
         keep = dist .> 0
@@ -292,32 +293,71 @@ let
     p = plot()
     colordict = Dict(64=>:blue, 128=>:green, 256=>:red)
     maxdist = range(1, stop=128, length=128)
-    for N in (64, 128, 256)
+    for N in ( 128, 256)
         U = 0.1
         Vpp = 0.8
-        dV = 3.65 #choices 3.2, 3.5, 3.55, 3.7
+        dV = 3.55 #choices 3.2, 3.5, 3.55, 3.7
         t = 1.0
-        datafilename = filename_builder(N, t, U, Vpp, dV)
+        datafilename = filename_builder(N, t, U, Vpp, dV; prefix="data/Hubbard/ImpPrec/")
 
         data = load_correlations(datafilename)
         site = Int(N//2)
         xvals = 1:N
         # chargecorr_conn = data.chargemat[site, :] .- data.ntot_expect[site] .* data.ntot_expect
-        spinpmcorr = data.spmmat[site, :]
-        chargecorr_conn = spinpmcorr
+        # spinpmcorr = data.spmmat[site, :]
+        # chargecorr_conn = spinpmcorr
+        chargecorr_conn = data.elecupmat[site,:] .+ data.elecdnmat[site,:]
         @show length(chargecorr_conn)
         dist = xvals .- site
         keep = dist .> 0
         keep_neg = keep #.& (chargecorr_conn .< 0)
         @show length(chargecorr_conn[keep_neg])
-        plot!(dist[keep_neg], abs.(-chargecorr_conn[keep_neg]), marker=:circle, 
+        plot!(dist[keep_neg], abs.(log.(abs.(-chargecorr_conn[keep_neg]))), marker=:circle, 
+        color=colordict[N], strokecolor=colordict[N], lw=2, ms=2, label="N=$N")
+    end
+    plot!(yscale=:log10)
+    plot!(xscale=:log10)
+    plot!(xlabel=raw"$x-\frac{N}{2}$", ylabel=raw"$| S^+(x)S^-(N/2)|$", title="Spin +- correlations", legendfontsize=12)
+    # fitline = @. -0.21/ (pi * maxdist^2) + 0.01  * cos(0.0 * pi * maxdist) * maxdist^(-1 - 0.21*pi) / (log(maxdist))^1.5
+    # fitline = @. 0.07 * maxdist^(-0.947) #uses Kc = 0.67, Ks = 3.6
+    fitline = 1.8 * maxdist.^(0.6)
+    plot!(maxdist, abs.(fitline), ls=:dash, lw=2, color=:black, label=raw"$\sim x^{-\,(K_c + \frac{1}{K_s})}$")
+    plot!(legend =:none)
+    # plot!(maxdist, 0.0034 * maxdist.^(-1.21), ls=:dash, lw=2, color=:black, label=raw"$\sim x^{1.21}$")
+end
+
+##
+let 
+    #### PARA Spin2 CORRELATION FUNCTIONS ############
+    p = plot()
+    colordict = Dict(64=>:blue, 128=>:green, 256=>:red)
+    maxdist = range(1, stop=128, length=128)
+    for N in (128, 256)
+        U = 0.1
+        Vpp = 0.8
+        dV = 3.2 #choices 3.2, 3.5, 3.55, 3.7
+        t = 1.0
+        datafilename = filename_builder(N, t, U, Vpp, dV; prefix="data/Hubbard/ImpPrec/")
+        datafilename = filename_builder(N, t, U, Vpp, dV; prefix="data/Hubbard/")
+
+        data = load_correlations(datafilename)
+        @show keys(data)
+        site = Int(N//2)
+        xvals = 1:N
+        # chargecorr_conn = data.chargemat[site, :] .- data.ntot_expect[site] .* data.ntot_expect
+        spinpmcorr = data.spin2vec
+        chargecorr_conn = spinpmcorr
+        @show length(chargecorr_conn)
+        plot!(1:length(chargecorr_conn), abs.(chargecorr_conn), marker=:circle, 
         color=colordict[N], strokecolor=colordict[N], lw=2, ms=2, label="N=$N")
     end
     plot!(yscale=:log10, xscale=:log10)
-    plot!(xlabel=raw"$x-\frac{N}{2}$", ylabel=raw"$| S^+(x)S^-(N/2)|$", title="Spin +- correlations", legendfontsize=12)
+    plot!(xlabel=raw"$x-\frac{N}{2}$", ylabel=raw"$| S^+(x)S^-(N/2)|$", title="S-S-S+S+ correlations", legendfontsize=12)
     # fitline = @. -0.21/ (pi * maxdist^2) + 0.01  * cos(0.0 * pi * maxdist) * maxdist^(-1 - 0.21*pi) / (log(maxdist))^1.5
-    fitline = @. 0.07 * maxdist^(-0.947) #uses Kc = 0.67, Ks = 3.6
+    # fitline = @. 0.0007 * maxdist^(-0.947) #uses Kc = 0.67, Ks = 3.6
+    fitline = @. 0.0009 * maxdist^(-4.0/4.1) #uses Kc = 0.67, Ks = 3.6
     plot!(maxdist, abs.(fitline), ls=:dash, lw=2, color=:black, label=raw"$\sim x^{-\,(K_c + \frac{1}{K_s})}$")
-    plot!(legend =:bottomleft)
+    # plot!(legend =:bottomleft)
+    plot!(legend=:none)
     # plot!(maxdist, 0.0034 * maxdist.^(-1.21), ls=:dash, lw=2, color=:black, label=raw"$\sim x^{1.21}$")
 end

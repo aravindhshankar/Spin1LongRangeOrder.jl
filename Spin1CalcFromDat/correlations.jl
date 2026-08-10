@@ -33,31 +33,28 @@ function compute_and_save_correlations(datafilename; blas_threads_per_task::Int=
 
     BLAS.set_num_threads(blas_threads_per_task)
 
-    # Full correlation matrices (N x N each) — no site selection here anymore
     t_sz      = Threads.@spawn correlation_matrix(psi, "Sz", "Sz")
-    t_sz      = Threads.@spawn correlation_matrix(psi, "Sz2", "Sz2")
+    t_sz2     = Threads.@spawn correlation_matrix(psi, "Sz2", "Sz2")
     t_spm     = Threads.@spawn correlation_matrix(psi, "S+", "S-")
     t_sx      = Threads.@spawn correlation_matrix(psi, "Sx", "Sx")
     t_sy      = Threads.@spawn correlation_matrix(psi, "Sy", "Sy")
 
     # cheap, do directly on main thread while the above run
     sz_exp   = expect(psi, "Sz")
-    ntot_exp = expect(psi, "Ntot")
 
-    szmat      = fetch(t_sz)
-    spmmat     = fetch(t_spm)
-    chargemat  = fetch(t_charge)
-    elecupmat  = fetch(t_elec_up)
-    elecdnmat  = fetch(t_elec_dn)
+    szmat     = fetch(t_sz)
+    sz2mat    = fetch(t_sz2)
+    spmmat    = fetch(t_spm)
+    sxmat     = fetch(t_sx)
+    symat     = fetch(t_sy)
 
     h5open(outfile, "w") do f
         f["szmat"]       = szmat
-        f["chargemat"]   = chargemat
+        f["sz2mat"]      = sz2mat
         f["spmmat"]      = spmmat
-        f["elecupmat"]   = elecupmat
-        f["elecdnmat"]   = elecdnmat
+        f["sxmat"]       = sxmat
+        f["symat"]       = symat
         f["sz_expect"]   = sz_exp
-        f["ntot_expect"] = ntot_exp
         for (k, v) in params
             try
                 f["params/$k"] = v
@@ -90,12 +87,11 @@ function load_correlations(datafilename)
     data = h5open(corrfile, "r") do f
         (
             szmat      = read(f["szmat"]),
-            chargemat  = read(f["chargemat"]),
+            sz2mat     = read(f["sz2mat"]),
             spmmat     = read(f["spmmat"]),
-            elecupmat  = read(f["elecupmat"]),
-            elecdnmat  = read(f["elecdnmat"]),
+            sxmat      = read(f["sxmat"]),
+            symat      = read(f["symat"]),
             sz_expect   = read(f["sz_expect"]),
-            ntot_expect = read(f["ntot_expect"]),
         )
     end
     return data
