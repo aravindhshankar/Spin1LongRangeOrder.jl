@@ -28,6 +28,8 @@ function main()
 
     println("Task $task_id / $ntasks handling $(length(my_files)) of $nfiles files")
     println("Threads.nthreads() = ", Threads.nthreads())
+    println("This job files : ", my_files)
+    flush(stdout)
 
     for datafilename in my_files
         println("---- Task $task_id processing $datafilename ----")
