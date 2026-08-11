@@ -39,9 +39,16 @@ import h5py
 # keep this in sync with driver_idmrg_datacollector.py
 DATA_ROOT = '../../data/iDMRG/'
 REQ_DATA_LIST = [
-    'scanChi800',
+    # 'scanChi800',
+    'scanChi600', 
+    'scanChi200', 
+    'scanChi1000',
+    'scanChi1200',
+    'rev/scanChi100',
+    'rev/scanChi200', 
+    'rev/scanChi400',
+    'Vpm3.8cc', 'Vpm4.300cc, Vpm4.350cc', 'Vpm4.400cc', 'Vpm4.500cc', 'Vpm4.600cc', 'Vpm4.800cc', 'Vpm6.0cc',
 ]
-
 ARRAY_FIELDS = ['charge_corr', 'spinz_corr', 'spsm_corr',
                  'electron_corr', 'spin2_corr']
 

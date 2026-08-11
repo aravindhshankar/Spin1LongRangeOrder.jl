@@ -47,7 +47,15 @@ DATA_ROOT = '../../data/iDMRG/'
 # are pooled and load-balanced together across the SLURM array tasks, so
 # a slow scan doesn't starve a fast one.
 REQ_DATA_LIST = [
-    'scanChi800',
+    # 'scanChi800',
+    'scanChi600', 
+    'scanChi200', 
+    'scanChi1000',
+    'scanChi1200',
+    'rev/scanChi100',
+    'rev/scanChi200', 
+    'rev/scanChi400',
+    'Vpm3.8cc', 'Vpm4.300cc, Vpm4.350cc', 'Vpm4.400cc', 'Vpm4.500cc', 'Vpm4.600cc', 'Vpm4.800cc', 'Vpm6.0cc',
 ]
 
 DISTRANGE = None   # None -> atomic_action figures it out per-file (0.9*xi)
@@ -61,6 +69,8 @@ def atomic_action(file, distrange=DISTRANGE, storepsi=STOREPSI):
     psi, metadata = io.load_mps_with_metadata(file)
     model_params = metadata['model_params']
     correlation_length = psi.correlation_length2()
+    if correlation_length > 1e5: 
+        raise Exception(" Pathological MPS, skip! ")
     if not distrange:
         distrange = int(0.9 * correlation_length)
     charge_corr = obs.charge_corr(psi, distrange, connected=True)
