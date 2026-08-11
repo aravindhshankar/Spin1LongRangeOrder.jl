@@ -3,9 +3,12 @@
 #SBATCH --array=0-7
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
-#SBATCH --mem=16G
+#SBATCH --mem=10G
+#SBATCH --partition=cmsp,long
 #SBATCH --time=04:00:00
 #SBATCH --output=logs/idmrg_corrs_%A_%a.out
+#SBATCH --mail-user=ashankar@ictp.it
+#SBATCH --mail-type=ALL
 
 
 mkdir -p logs

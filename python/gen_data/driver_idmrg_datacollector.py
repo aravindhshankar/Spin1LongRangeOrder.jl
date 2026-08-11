@@ -28,15 +28,13 @@ import time
 import pickle
 import argparse
 import traceback
-
+sys.path.append('..')
 import numpy as np
 
-# adjust this if your utils/ package lives somewhere else relative to this file
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
-from utils import io as io
-from utils import obs as obs
-from utils import slurmhelpers as sh
+import utils.io as io
+import src.observables as obs
+import utils.slurmhelpers as sh
 
 # ============================================================
 # CONFIG -- edit this section to change what gets processed.
