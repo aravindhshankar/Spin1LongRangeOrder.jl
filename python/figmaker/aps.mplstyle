@@ -1,0 +1,68 @@
+# --- APS-like Matplotlib stylesheet (LaTeX fonts enabled) ---
+# Save as: aps.mplstyle
+
+# Use LaTeX for all text rendering (requires a working TeX installation)
+text.usetex: True
+font.family: serif
+font.serif: Times
+text.latex.preamble: \usepackage{siunitx}\usepackage{amsmath}\usepackage{physics}
+
+# Base font size ~9pt (APS single-column friendly)
+font.size: 9.0
+
+# Figure sizing & DPI
+figure.figsize: 3.4, 2.1   # Default single-column width (inches); adjust with helper below
+figure.dpi: 300
+savefig.dpi: 300
+savefig.format: pdf
+savefig.bbox: tight
+savefig.pad_inches: 0.01
+pdf.fonttype: 42
+ps.fonttype: 42
+
+# Lines & markers
+lines.linewidth: 1.0
+lines.markersize: 3.0
+lines.markeredgewidth: 0.8
+errorbar.capsize: 2.0
+
+# Axes
+axes.linewidth: 0.8
+axes.labelsize: 9.0
+axes.titlesize: 9.0
+axes.grid: False
+axes.spines.top: True
+axes.spines.right: True
+axes.formatter.use_mathtext: True
+
+# Ticks
+xtick.direction: in
+ytick.direction: in
+xtick.major.size: 3.5
+ytick.major.size: 3.5
+xtick.minor.size: 2.0
+ytick.minor.size: 2.0
+xtick.major.width: 0.8
+ytick.major.width: 0.8
+xtick.minor.width: 0.6
+ytick.minor.width: 0.6
+xtick.minor.visible: True
+ytick.minor.visible: True
+xtick.labelsize: 8.0
+ytick.labelsize: 8.0
+
+# Legend
+legend.frameon: False
+legend.fontsize: 8.0
+legend.handlelength: 1.5
+legend.handletextpad: 0.4
+legend.borderpad: 0.2
+
+# Patch / errorbar caps / boxplots
+patch.linewidth: 0.8
+boxplot.flierprops.marker: o
+boxplot.flierprops.markersize: 2.5
+boxplot.flierprops.markeredgewidth: 0.6
+
+# Layout
+figure.autolayout: False
