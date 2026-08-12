@@ -1,5 +1,6 @@
 import numpy as np
 import tenpy
+from scipy.fftpack import fft
 
 def SzSz_corr(psi, length=10, connected=False):
     corrfn = psi.correlation_function("Sz", "Sz", [0], length)[0]
@@ -87,3 +88,24 @@ def op_correlation_idmrg(psi, opA=("Sp", "Sp"), opAdag=("Sm", "Sm"),
         corr = corr - O_val * Odag_val
 
     return xs, corr
+
+
+def ret_Kc_Ks_from_seldf(seldf, fitsliceKc=slice(1,4), fitsliceKs=slice(1,4)):
+    '''This is a specific helper function for the julia generated data, obtained from 
+        seldf = julio.select_N_dv_from_df(N, dV, df)
+        Note : Ks has a lot of spread, and can change by up to 0.5,
+               Kc has lower spread, and can change by up to 0.1 in the worst case
+    ''' 
+    N = seldf["N"].values[0]
+    charge_conn = seldf["chargemat"].values[0][N//2, :] - seldf["ntot_expect"].values[0][N//2] * seldf["ntot_expect"].values[0]
+    fft_chargecorr = fft(charge_conn)
+    omega = 2 * np.pi * np.arange(N) / (N)
+    gradKc = np.gradient(np.abs(fft_chargecorr)[fitsliceKc], omega[fitsliceKc]).mean()
+    Kc = np.pi * gradKc
+
+    spinzconn = seldf["szmat"].values[0][N//2, :] - seldf["sz_expect"].values[0][N//2] * seldf["sz_expect"].values[0]
+    fft_spinzcorr = fft(spinzconn)
+    gradKs = np.gradient(np.abs(fft_spinzcorr)[fitsliceKs], omega[fitsliceKs]).mean()
+    Ks = 4.0 * np.pi * gradKs
+
+    return Kc, Ks
