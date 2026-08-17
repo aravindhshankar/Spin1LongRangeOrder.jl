@@ -7,8 +7,8 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
 #SBATCH --array=0-4
-#SBATCH --mem=5G
-#SBATCH --time=23:00:00
+#SBATCH --mem=8G
+#SBATCH --time=23:45:00
 #SBATCH --output=logs/%x_%j.out
 
 mkdir -p logs

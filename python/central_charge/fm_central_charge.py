@@ -1,13 +1,3 @@
-"""Example to extract the central charge from the entanglement scaling.
-
-This example code evaluate the central charge of the transverse field Ising model using iDMRG.
-The expected value for the central charge c = 1/2. The code always recycle the environment from
-the previous simulation, which can be seen at the "age".
-
-For the theoretical background why :math:`S = c/6 log(xi)`, see :cite:`pollmann2009`.
-"""
-# Copyright (C) TeNPy Developers, Apache license
-
 import time
 
 import numpy as np
@@ -91,7 +81,8 @@ def example_DMRG_hubbard_infinite_S_xi_scaling(Vpm):
     # psi, _ = io.load_mps_with_metadata(os.path.join(ROOTDIR, f"Vpm_{Vpm:.3f}_chi1000.h5"))
     # psi, = io.load_mps_with_metadata('../../data/iDMRG/scanChi500/Vpm_4.800_chi500.h5') #initial ferro state
     # psi, _ = io.load_mps_with_metadata('Vpm_6.000_chi_100.h5')
-    psi, _ = io.load_mps_with_metadata(f'../../data/iDMRG/rev/scanChi200/Vpm_{Vpm:.3f}_chi200.h5')
+    # psi, _ = io.load_mps_with_metadata(f'../../data/iDMRG/rev/scanChi200/Vpm_{Vpm:.3f}_chi200.h5')
+    psi, _ = io.load_mps_with_metadata(os.path.join(ROOTDIR, f"Vpm_{Vpm:.3f}_chi500.h5"))
     print("loaded intital psi, starting ...........", flush=True)
     psi.canonical_form_infinite2()
     dmrg_params = {
@@ -102,13 +93,14 @@ def example_DMRG_hubbard_infinite_S_xi_scaling(Vpm):
         # 'trunc_params': {'chi_max': 1098, 'svd_min': 1.0e-10},
         'trunc_params': {'chi_max': 200, 'svd_min': 1.0e-12},
         'max_E_err': 1.0e-8, #was -7
-        'max_S_err': 1.0e-5, #was -7
+        'max_S_err': 1.0e-6, #was -7
         'update_env': 0,
     }
 
     # chi_list = np.arange(7, 31, 2)
     # chi_list = np.arange(80, 501, 20)
-    chi_list = np.arange(200, 501, 20)
+    # chi_list = np.arange(200, 501, 20)
+    chi_list = np.arange(550, 1001, 50)
     # chi_list = np.arange(1100, 2001, 100)
     s_list = []
     xi_list = []
