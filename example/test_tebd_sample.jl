@@ -1,11 +1,9 @@
+using MKL
 using Spin1LongRangeOrder
 using ITensors, ITensorMPS
 include(joinpath("../calculateFromData", "correlations.jl")) 
-
-##
-# ================================================================
-# Two-site Hamiltonian h_{i,i+1}
-# ================================================================
+using Plots
+gr()
 
 function bond_hamiltonian(sites, i, t, Vpp, Vpm)
     s1 = sites[i]
@@ -22,16 +20,9 @@ function bond_hamiltonian(sites, i, t, Vpp, Vpm)
     return hj
 end
 
-# ================================================================
-# One-site Hubbard Hamiltonian
-# ================================================================
-
 function onsite_hamiltonian(sites, i, U)
-
     return U * op("Nupdn", sites[i])
-
 end
-
 
 function build_tebd_gates_2nd(sites, dt, t, U, Vpp, Vpm)
     N = length(sites)
@@ -60,27 +51,6 @@ function build_tebd_gates_2nd(sites, dt, t, U, Vpp, Vpm)
     return gates
 end
 
-# ================================================================
-function build_tebd_gates_4th(sites, dt,t, U, Vpp, Vpm)
-    p = 1 / (4 - 4^(1 / 3))
-    q = 1 - 4p
-    gates = ITensor[]
-    for scale in (p, p, q, p, p)
-        append!(
-            gates,
-            build_tebd_gates_2nd(
-                sites,
-                scale * dt,
-                t,
-                U,
-                Vpp,
-                Vpm,
-            ),
-        )
-    end
-    return gates
-end
-
 
 let
     N = 64
@@ -89,7 +59,7 @@ let
     psi0, params = load_simulation(filename, Val(:all))
     println("The initial bond dimension of psi0 is ", ret_maxlinkdim(psi0))
     sites = siteinds(psi0)
-    tau = 1E-4
+    tau = 1E-2
     ttotal = 2 * tau
 
     cutoff = 1e-14
@@ -97,16 +67,57 @@ let
     gates = build_tebd_gates_2nd(sites, tau, t, U, Vpp, Vpm)
 
     psi=copy(psi0)
-    @profview begin
+    c = div(N,2) 
+    
+    
+    opname = "Cdn"
+    opdagname = "Cdagdn"
+
+    psi = apply(op(opname, sites[c]), psi; cutoff, maxdim) #perturb init state
+
     for time in 0.0:tau:ttotal
-    # Measure observables here
-    # ...
-    psi = apply(gates, psi; cutoff=cutoff, maxdim=maxdim)
-    normalize!(psi)
-    time≈ttotal && break
-    inp = abs(inner(psi0', psi))
-    @show inp
+        @time psi = apply(gates, psi; cutoff=cutoff, maxdim=maxdim)
+        time≈ttotal && break
     end
-    end
+
     println("The final bond dimesnion is ", ret_maxlinkdim(psi))
+
+    os = [(opdagname, n) for n in 1:N]
+    gatesend = ops(os, sites)
+    corrsz = [inner(psi0, apply(gatesend[n], psi; cutoff, maxdim)) for n in 1:N]
+    # corrsz =  inner(psi0, apply(gatesend, psi))
+
+initcorrsz = correlation_matrix(psi0, opname, opdagname)[c, :]
+p = plot(abs.(corrsz))
+plot!(abs.(initcorrsz))
+plot!(yscale=:log)
+display(p)
 end
+
+# let
+#     N = 16
+#     t, U, Vpp, Vpm = 1.0, 0.1, 0.8, 4.0
+#     filename = filename_builder(N, t, U, Vpp, Vpm)
+#     psi0, params = load_simulation(filename, Val(:all))
+#     println("The initial bond dimension of psi0 is ", ret_maxlinkdim(psi0))
+#     sites = siteinds(psi0)
+#     tau = 1E-4
+#     ttotal = 2 * tau
+
+#     cutoff = 1e-14
+#     maxdim = 600
+#     gates = build_tebd_gates_2nd(sites, tau, t, U, Vpp, Vpm)
+
+#     psi=copy(psi0)
+  
+#     for time in 0.0:tau:ttotal
+#         # Measure observables here
+#         # ...
+#         @time psi = apply(gates, psi; cutoff=cutoff, maxdim=maxdim)
+#         normalize!(psi)
+#         time≈ttotal && break
+#         inp = abs(inner(psi0, psi))
+#         @show inp
+#     end
+#     println("The final bond dimesnion is ", ret_maxlinkdim(psi))
+# end
