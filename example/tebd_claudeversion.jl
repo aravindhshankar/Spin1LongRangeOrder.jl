@@ -1,6 +1,9 @@
+using MKL
 using ITensors
 using ITensorMPS   # if you're on a recent ITensors split; harmless if not needed
-
+include(joinpath("../calculateFromData", "correlations.jl"))
+using Plots
+gr()
 # -----------------------------------------------------------------------
 # Your Hamiltonian, unchanged
 # -----------------------------------------------------------------------
@@ -194,21 +197,38 @@ function dynamical_correlation_tebd(
     return Cx
 end
 
+@time begin
+let
 # -----------------------------------------------------------------------
 # Example usage:
 #
-# psi0 = load_simulation(filepath)          # your DMRG ground state
-# sites = siteinds(psi0)
-#
-# Cx = dynamical_correlation_tebd(
-#     psi0, 5.0;
-#     t=1.0, U=4.0, Vpp=0.5, Vpm=0.5,
-#     operator = :charge,          # :charge, :Sz, :Splus, :cup, :cdn
-#     dt = 0.02,
-#     cutoff = 1e-9,
-#     maxdim = 1000,
-#     subtract_disconnected = true,
-# )
-#
+N = 16
+t, U, Vpp, Vpm = 1.0, 0.1, 0.8, 4.0
+filename = filename_builder(N, t, U, Vpp, Vpm)
+psi0, params = load_simulation(filename, Val(:all))
+println("The initial bond dimension of psi0 is ", ret_maxlinkdim(psi0))
+sites = siteinds(psi0)
+c = div(N,2)
+
+
+Cx = dynamical_correlation_tebd(
+    psi0, 1.0;
+    t=1.0, U=4.0, Vpp=0.5, Vpm=0.5,
+    operator = :Splus,          # :charge, :Sz, :Splus, :cup, :cdn
+    dt = 0.01,
+    x0 = c,
+    cutoff = 1e-10,
+    maxdim = 600,
+    subtract_disconnected = true,
+)
+initcorrsz = correlation_matrix(psi0, "S+", "S-")[c, :]
+xvals = collect(1:length(initcorrsz))
+p = plot(xvals, abs.(Cx), label="Dynamic")
+plot!(xvals, abs.(initcorrsz), label="Static")
+plot!(yscale = :log)
+display(p)
+
 # Cx[x] is C(x, t=5.0) for site x = 1:N
 # -----------------------------------------------------------------------
+end
+end

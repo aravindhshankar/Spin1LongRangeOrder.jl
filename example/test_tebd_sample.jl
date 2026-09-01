@@ -5,6 +5,7 @@ include(joinpath("../calculateFromData", "correlations.jl"))
 using Plots
 gr()
 
+##
 function bond_hamiltonian(sites, i, t, Vpp, Vpm)
     s1 = sites[i]
     s2 = sites[i + 1]
@@ -51,18 +52,18 @@ function build_tebd_gates_2nd(sites, dt, t, U, Vpp, Vpm)
     return gates
 end
 
-
+@time begin
 let
-    N = 64
+    N = 16
     t, U, Vpp, Vpm = 1.0, 0.1, 0.8, 4.0
     filename = filename_builder(N, t, U, Vpp, Vpm)
     psi0, params = load_simulation(filename, Val(:all))
     println("The initial bond dimension of psi0 is ", ret_maxlinkdim(psi0))
     sites = siteinds(psi0)
     tau = 1E-2
-    ttotal = 2 * tau
+    ttotal = 100 * tau
 
-    cutoff = 1e-14
+    cutoff = 1e-12
     maxdim = 600
     gates = build_tebd_gates_2nd(sites, tau, t, U, Vpp, Vpm)
 
@@ -70,8 +71,8 @@ let
     c = div(N,2) 
     
     
-    opname = "Cdn"
-    opdagname = "Cdagdn"
+    opname = "S+"
+    opdagname = "S-"
 
     psi = apply(op(opname, sites[c]), psi; cutoff, maxdim) #perturb init state
 
@@ -93,7 +94,7 @@ plot!(abs.(initcorrsz))
 plot!(yscale=:log)
 display(p)
 end
-
+end
 # let
 #     N = 16
 #     t, U, Vpp, Vpm = 1.0, 0.1, 0.8, 4.0
