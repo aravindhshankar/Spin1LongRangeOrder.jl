@@ -117,8 +117,9 @@ function local_operator_correlation(bra::MPS, ket::MPS, opdagname::String, sites
     return Cx
 end
 
+@time begin
 let
-    N = 64
+    N = 16
     t, U, Vpp, Vpm = 1.0, 0.1, 0.8, 4.0
     filename = filename_builder(N, t, U, Vpp, Vpm)
     psi0, params = load_simulation(filename, Val(:all))
@@ -128,20 +129,18 @@ let
 
     sites = siteinds(psi0)
     tau = 1E-2
-    ttotal = 2 * tau        # bump this up once you've validated correctness
+    ttotal = 100 * tau        # bump this up once you've validated correctness
 
     cutoff = 1e-12
     maxdim = 600
 
     psi = copy(psi0)
     c = div(N, 2)
-    opname = "Cdn"
-    opdagname = "Cdagdn"
+    opname = "S+"
+    opdagname = "S-"
 
     psi = apply(op(opname, sites[c]), psi; cutoff, maxdim)  # perturb init state: |phi(0)> = O(c)|psi0>
-
     psi = tebd_evolve!(psi, sites, t, U, Vpp, Vpm, ttotal, tau; cutoff, maxdim)
-
     println("The final bond dimension is ", ret_maxlinkdim(psi))
 
     # <psi0| Odag(x) |phi(t)>  for every x, in one O(Nχ³) sweep
@@ -158,11 +157,13 @@ let
 
     # static (t=0) reference, computed with the SAME operator ordering as
     # the dynamic correlator above so the two are directly comparable
-    phi0 = apply(op(opname, sites[c]), psi0; cutoff, maxdim)
-    initcorrsz = local_operator_correlation(psi0, phi0, opdagname, sites)
-
-    p = plot(abs.(corrsz))
-    plot!(abs.(initcorrsz))
+    # phi0 = apply(op(opname, sites[c]), psi0; cutoff, maxdim)
+    # initcorrsz = local_operator_correlation(psi0, phi0, opdagname, sites)
+    initcorrsz = correlation_matrix(psi0, opname, opdagname)[c, :]
+    xvals = collect(1:length(corrsz))
+    p = plot(xvals, abs.(corrsz), label="Dynamic")
+    plot!(xvals, abs.(initcorrsz), label="Static")
     plot!(yscale = :log)
     display(p)
+end
 end
