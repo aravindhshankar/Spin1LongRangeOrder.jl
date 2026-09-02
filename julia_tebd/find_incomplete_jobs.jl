@@ -1,6 +1,6 @@
 # Needs to be run from project root.
 using Spin1LongRangeOrder
-include(joinpath("calculateFromData", "correlations.jl"))  # filename_builder
+include(joinpath(@__DIR__, "..", "calculateFromData", "correlations.jl"))  # filename_builder
 include(joinpath(@__DIR__, "dynamical_correlation_tebd.jl"))                       # peek_checkpoint
 include(joinpath(@__DIR__, "params_grid.jl"))
 

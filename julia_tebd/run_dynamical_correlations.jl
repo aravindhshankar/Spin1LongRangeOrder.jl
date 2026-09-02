@@ -20,7 +20,8 @@ function main()
     operator = Symbol(ARGS[6])
     tf       = parse(Float64, ARGS[7])
 
-    filename = filename_builder(N, t, U, Vpp, Vpm)
+    dV = Vpm - Vpp
+    filename = filename_builder(N, t, U, Vpp, dV)
     tag = basename(filename)
 
     tempdir   = joinpath(DATAROOT, "temp_dyn")
@@ -42,6 +43,7 @@ function main()
 
     psi0, params = load_simulation(filename, Val(:all))
     println("Loaded $filename, bond dim = ", ret_maxlinkdim(psi0))
+    flush(stdout)
     c = div(N, 2)
 
     dynamical_correlation_tebd(
