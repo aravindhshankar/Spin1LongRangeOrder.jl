@@ -1,6 +1,6 @@
 using ITensors, ITensorMPS, HDF5
 using Spin1LongRangeOrder # load_simulation, ret_maxlinkdim
-include(joinpath("calculateFromData", "correlations.jl"))  # filename_builder
+include(joinpath(@__DIR__, "..", "calculateFromData", "correlations.jl"))  # filename_builder
 include(joinpath(@__DIR__, "dynamical_correlation_tebd.jl"))
 
 const DATAROOT = "data/Hubbard/tebd/"   

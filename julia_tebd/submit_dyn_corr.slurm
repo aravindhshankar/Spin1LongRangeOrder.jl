@@ -1,9 +1,9 @@
 #!/bin/bash
 #SBATCH --job-name=dyn_corr
 #SBATCH --output=logs/dyn_corr_%A_%a.out
-#SBATCH --time=24:00:00
+#SBATCH --time=23:00:00
 #SBATCH --cpus-per-task=4
-#SBATCH --mem=32G
+#SBATCH --mem=16G
 #SBATCH --partition=cmsp,long
 
 mkdir -p logs
