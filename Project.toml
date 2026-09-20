@@ -21,7 +21,7 @@ PyPlot = "d330b81b-6aea-500a-939a-2ce795aea3ee"
 ThreadPinning = "811555cd-349b-4f26-b7bc-1f208b848042"
 
 [compat]
-Dates = "1.11.0"
+Dates = "1.11.0, 1.10"
 FFTW = "1.10.0"
 HDF5 = "0.17.3"
 ITensorMPS = "0.3.45, 0.4"
