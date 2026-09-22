@@ -16,8 +16,7 @@ function load_snapshots(path)
     return ts[order2], Cxs[order2]
 end
 
-function plot_dynamical_quantities(DATAROOT, tag)
-    operators = ["charge", "cdn", "Splus", "Sz"]
+function plot_dynamical_quantities(DATAROOT, tag; operators=["cup", "Sz"])
     plots = Plots.Plot[]
     for op in operators
         path = joinpath(DATAROOT, "dyn_corr", "$(tag)__op=$(op).h5")
@@ -32,7 +31,9 @@ function plot_dynamical_quantities(DATAROOT, tag)
         end
         push!(plots, p)
     end
-    plot(plots...; layout=(2, 2), size=(1100, 850))
+    ncols = ceil(Int, sqrt(length(plots)))
+    nrows = ceil(Int, length(plots) / ncols)
+    plot(plots...; layout=(nrows, ncols), size=(550 * ncols, 425 * nrows))
 end
 
 # Example:

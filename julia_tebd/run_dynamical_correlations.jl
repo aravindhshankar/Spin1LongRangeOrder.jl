@@ -41,6 +41,10 @@ function main()
         end
     end
 
+    println("Job params: N=$N t=$t U=$U Vpp=$Vpp Vpm=$Vpm operator=$operator tf=$tf  ",
+            "(dt=$DT, cutoff=$CUTOFF, maxdim=$MAXDIM)")
+    flush(stdout)
+
     psi0, params = load_simulation(filename, Val(:all))
     println("Loaded $filename, bond dim = ", ret_maxlinkdim(psi0))
     flush(stdout)
@@ -53,6 +57,7 @@ function main()
         dt=DT, cutoff=CUTOFF, maxdim=MAXDIM,
         checkpoint_path=checkpointpath, checkpoint_every=CHECKPOINT_EVERY,
         snapshot_path=snapshotpath, snapshot_every=SNAPSHOT_EVERY,
+        gc_every=SNAPSHOT_EVERY,
     )
 
     println("Snapshots up to t=$tf saved in $snapshotpath")

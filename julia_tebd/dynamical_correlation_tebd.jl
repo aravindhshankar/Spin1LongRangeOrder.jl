@@ -192,6 +192,7 @@ function dynamical_correlation_tebd(
     checkpoint_every::Int = 50,
     snapshot_path::Union{Nothing,String} = nothing,
     snapshot_every::Int = checkpoint_every,
+    gc_every::Int = checkpoint_every,
 )
     # Needed for correct fermion signs when applying local operators/gates
     # by hand (as opposed to letting OpSum build the MPO, which handles
@@ -238,9 +239,22 @@ function dynamical_correlation_tebd(
             Cx_step .*= cis(E0 * t_step)
             save_snapshot(snapshot_path, step, t_step, Cx_step)
         end
+        # Julia's GC (and MKL's internal scratch-buffer pool) can let RSS
+        # climb well past the live-data size under a cgroup memory limit,
+        # since the default GC heuristics are tuned to *system* memory
+        # pressure, which a cgroup cap doesn't visibly create until it's
+        # too late. Forcing a collection here bounds that drift; combine
+        # with MKL_DISABLE_FAST_MM=1 and --heap-size-hint at job submission.
+        if step % gc_every == 0 || step == nsteps
+            GC.gc()
+        end
+
         if verbose
+            rss_gb = round(Sys.maxrss() / 2^30, digits=2)
             println("  step $step/$nsteps  (t=$(round(step*dt_actual, digits=4)))  ",
-                    "maxlinkdim(phi) = $(maxlinkdim(phi))  norm(phi) = $(round(norm(phi), digits=6))")
+                    "maxlinkdim(phi) = $(maxlinkdim(phi))  norm(phi) = $(round(norm(phi), digits=6))  ",
+                    "peak RSS = $(rss_gb) GB")
+            flush(stdout)   # cluster logs are only useful live if they're not stuck in a buffer
         end
     end
 
