@@ -14,6 +14,7 @@ echo "Module Load steps compelete"
 
 PARAMS_FILE=${PARAMS_FILE:-job_params.txt}
 TF=${TF:-1.0}
+METHOD=${METHOD:-tebd}
 LINE=$(sed -n "${SLURM_ARRAY_TASK_ID}p" "$PARAMS_FILE")
 read -r N t U Vpp Vpm OP <<< "$LINE"
 
@@ -29,15 +30,23 @@ export OPENBLAS_NUM_THREADS=1
 # malloc/free normally so memory is actually released between steps.
 export MKL_DISABLE_FAST_MM=1
 
+# glibc otherwise raises its mmap threshold up to 32 MB after the first big
+# free, so MB-sized tensor blocks land on the heap, fragment, and are never
+# returned to the OS. Pin the threshold so they are always mmap'd/munmap'd.
+export MALLOC_MMAP_THRESHOLD_=1048576
+export MALLOC_TRIM_THRESHOLD_=67108864
+export MALLOC_ARENA_MAX=2
+
 cd .. # go to project root
 echo "Should now be in root directory : $(pwd)"
 
 # Julia's GC paces itself off perceived system memory pressure, which a
 # SLURM cgroup memory cap doesn't create until the limit is nearly hit --
 # so raising --mem alone doesn't make the GC collect any sooner. Pointing
-# --heap-size-hint below the cgroup limit tells Julia to start collecting
+# --heap-size-hint below the cgroup limit (60%: the hint only counts GC memory,
+# MKL/SVD workspace sits on top) tells Julia to start collecting
 # well before that, instead of ballooning RSS until the OOM killer fires.
-HEAP_HINT_GB=$(( ${SLURM_MEM_PER_NODE:-65536} * 85 / 100 / 1024 ))
-julia --project=. --heap-size-hint=${HEAP_HINT_GB}G julia_tebd/run_dynamical_correlations.jl "$N" "$t" "$U" "$Vpp" "$Vpm" "$OP" "$TF"
+HEAP_HINT_GB=$(( ${SLURM_MEM_PER_NODE:-65536} * 60 / 100 / 1024 ))
+julia --project=. --heap-size-hint=${HEAP_HINT_GB}G julia_tebd/run_dynamical_correlations.jl "$N" "$t" "$U" "$Vpp" "$Vpm" "$OP" "$TF" "$METHOD"
 
 echo "FINISHED, exiting slurm"

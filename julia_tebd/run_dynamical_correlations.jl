@@ -1,7 +1,7 @@
 using ITensors, ITensorMPS, HDF5
 using Spin1LongRangeOrder # load_simulation, ret_maxlinkdim
 include(joinpath(@__DIR__, "..", "calculateFromData", "correlations.jl"))  # filename_builder
-include(joinpath(@__DIR__, "dynamical_correlation_tebd.jl"))
+include(joinpath(@__DIR__, "dynamical_correlation_tdvp.jl"))  # also pulls in the TEBD file
 
 const DATAROOT = "data/Hubbard/tebd/"   
 
@@ -19,10 +19,13 @@ function main()
     Vpm      = parse(Float64, ARGS[5])
     operator = Symbol(ARGS[6])
     tf       = parse(Float64, ARGS[7])
+    method   = get(ARGS, 8, "tebd")   # "tebd" or "tdvp"
+    method in ("tebd", "tdvp") || error("method must be tebd or tdvp, got $method")
 
     dV = Vpm - Vpp
     filename = filename_builder(N, t, U, Vpp, dV)
     tag = basename(filename)
+    method == "tdvp" && (tag *= "__tdvp")   # separate checkpoints/snapshots; TEBD names unchanged
 
     tempdir   = joinpath(DATAROOT, "temp_dyn")
     resultdir = joinpath(DATAROOT, "dyn_corr")
@@ -41,7 +44,7 @@ function main()
         end
     end
 
-    println("Job params: N=$N t=$t U=$U Vpp=$Vpp Vpm=$Vpm operator=$operator tf=$tf  ",
+    println("Job params: N=$N t=$t U=$U Vpp=$Vpp Vpm=$Vpm operator=$operator tf=$tf method=$method  ",
             "(dt=$DT, cutoff=$CUTOFF, maxdim=$MAXDIM)")
     flush(stdout)
 
@@ -50,7 +53,8 @@ function main()
     flush(stdout)
     c = div(N, 2)
 
-    dynamical_correlation_tebd(
+    evolve = method == "tdvp" ? dynamical_correlation_tdvp : dynamical_correlation_tebd
+    evolve(
         psi0, tf;
         t=t, U=U, Vpp=Vpp, Vpm=Vpm,
         operator=operator, x0=c,

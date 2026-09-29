@@ -50,6 +50,15 @@ function save_snapshot(path::String, step::Int, t_now::Real, Cx::Vector{ComplexF
     end
 end
 
+# current (not peak) resident memory; Linux-only, falls back to peak elsewhere
+function current_rss()
+    isfile("/proc/self/status") || return Sys.maxrss()
+    for l in eachline("/proc/self/status")
+        startswith(l, "VmRSS:") && return parse(Int, split(l)[2]) * 1024
+    end
+    return Sys.maxrss()
+end
+
 # -----------------------------------------------------------------------
 # Your Hamiltonian, unchanged
 # -----------------------------------------------------------------------
@@ -91,26 +100,42 @@ function make_tebd_gates(sites, t, U, Vpp, Vpm, tau)
         s1 = sites[j]
         s2 = sites[j + 1]
 
-        hj =  -t * op("Cdagup", s1) * op("Cup",    s2)
-        hj +=  t * op("Cup",    s1) * op("Cdagup", s2)
-        hj += -t * op("Cdagdn", s1) * op("Cdn",    s2)
-        hj +=  t * op("Cdn",    s1) * op("Cdagdn", s2)
+        # Built through a 2-site OpSum MPO so the Jordan-Wigner signs are
+        # exactly those of build_hamiltonian (the convention DMRG used).
+        os = OpSum()
+        os += -t, "Cdagup", 1, "Cup",    2
+        os +=  t, "Cup",    1, "Cdagup", 2
+        os += -t, "Cdagdn", 1, "Cdn",    2
+        os +=  t, "Cdn",    1, "Cdagdn", 2
 
-        hj += Vpp * op("Nup", s1) * op("Nup", s2)
-        hj += Vpp * op("Ndn", s1) * op("Ndn", s2)
-        hj += Vpm * op("Nup", s1) * op("Ndn", s2)
-        hj += Vpm * op("Ndn", s1) * op("Nup", s2)
+        os += Vpp, "Nup", 1, "Nup", 2
+        os += Vpp, "Ndn", 1, "Ndn", 2
+        os += Vpm, "Nup", 1, "Ndn", 2
+        os += Vpm, "Ndn", 1, "Nup", 2
 
         fac1 = (j == 1)     ? 1.0 : 0.5
         fac2 = (j == N - 1) ? 1.0 : 0.5
-        hj += fac1 * U * op("Nupdn", s1) * op("Id", s2)
-        hj += fac2 * U * op("Id",    s1) * op("Nupdn", s2)
+        os += fac1 * U, "Nupdn", 1
+        os += fac2 * U, "Nupdn", 2
+        hj = prod(MPO(os, [s1, s2]))
 
         push!(gates, exp(-im * tau / 2 * hj))
     end
 
     append!(gates, reverse(gates))   # symmetric (2nd order) Trotter step
     return gates
+end
+
+# A stepper builds a closure  phi -> phi(t+dt)  once, before the time loop.
+# Swapping it (see tdvp_stepper in dynamical_correlation_tdvp.jl) changes
+# the time-evolution method without touching the driver below.
+function tebd_stepper(phi, H; sites, t, U, Vpp, Vpm, dt, cutoff, maxdim, normalize)
+    gates = make_tebd_gates(sites, t, U, Vpp, Vpm, dt)
+    return function (phi)
+        phi = apply(gates, phi; cutoff=cutoff, maxdim=maxdim)
+        normalize && normalize!(phi)
+        return phi
+    end
 end
 
 # -----------------------------------------------------------------------
@@ -120,26 +145,43 @@ end
 # -----------------------------------------------------------------------
 function local_operator_correlation(psi0::MPS, phi::MPS, opdagname::String, sites)
     N = length(psi0)
+    # Fresh bra link indices: phi can share links with psi0 (always at t=0,
+    # since O(x0)|psi0> only touches one site tensor), which would otherwise
+    # contract them together.
+    bra = dag(sim(linkinds, psi0))
+    # fermionic Odag(x) carries a Jordan-Wigner string F on every site < x
+    fermionic = ITensors.has_fermion_string(opdagname, sites[1])
 
-    L = Vector{ITensor}(undef, N + 1)
-    L[1] = ITensor(1.0)
-    for j in 1:N
-        L[j+1] = L[j] * phi[j] * dag(psi0[j])
-    end
-
-    R = Vector{ITensor}(undef, N + 2)
+    R = Vector{ITensor}(undef, N + 1)
     R[N+1] = ITensor(1.0)
-    for j in N:-1:1
-        R[j] = R[j+1] * phi[j] * dag(psi0[j])
+    for j in N:-1:2
+        R[j] = (R[j+1] * bra[j]) * phi[j]
     end
 
+    # left environment carried as a single running tensor (only R is stored)
+    L = ITensor(1.0)
     Cx = Vector{ComplexF64}(undef, N)
     for x in 1:N
-        Odag = op(opdagname, sites[x])
-        mid  = phi[x] * Odag * dag(prime(psi0[x], sites[x]))
-        Cx[x] = (L[x] * mid * R[x+1])[]
+        Lb = L * bra[x]
+        Cx[x] = (Lb * noprime(op(opdagname, sites[x]) * phi[x]) * R[x+1])[]
+        L = fermionic ? Lb * noprime(op("F", sites[x]) * phi[x]) : Lb * phi[x]
     end
     return Cx
+end
+
+# O(x0)|psi>, with the Jordan-Wigner string F on sites < x0 when O is
+# fermionic (OpSum refuses parity-odd single-operator MPOs). Single-site
+# tensors only, so no links change; truncate afterwards if needed.
+function apply_local_operator(psi::MPS, opname::String, x0::Int)
+    sites = siteinds(psi)
+    phi = copy(psi)
+    if ITensors.has_fermion_string(opname, sites[x0])
+        for j in 1:(x0 - 1)
+            phi[j] = noprime(op("F", sites[j]) * phi[j])
+        end
+    end
+    phi[x0] = noprime(op(opname, sites[x0]) * phi[x0])
+    return phi
 end
 
 # -----------------------------------------------------------------------
@@ -193,12 +235,11 @@ function dynamical_correlation_tebd(
     snapshot_path::Union{Nothing,String} = nothing,
     snapshot_every::Int = checkpoint_every,
     gc_every::Int = checkpoint_every,
+    stepper = tebd_stepper,
 )
-    # Needed for correct fermion signs when applying local operators/gates
-    # by hand (as opposed to letting OpSum build the MPO, which handles
-    # Jordan-Wigner strings internally regardless of this flag).
-    ITensors.enable_auto_fermion()
-
+    # No auto-fermion: the ground states come from standard-mode DMRG, and
+    # auto-fermion turns the same OpSum into a different operator. Jordan-
+    # Wigner strings are handled explicitly (OpSum MPOs, F in the environment).
     sites = siteinds(psi0)
     N = length(sites)
     x0 = something(x0, N ÷ 2)
@@ -220,15 +261,15 @@ function dynamical_correlation_tebd(
         end
         E0 === nothing && (E0 = real(inner(psi0, H, psi0)))
         verbose && println("E0 = $E0,  x0 = $x0,  operator = $operator")
-        Ox0 = op(opname, sites[x0])
-        phi = apply(Ox0, psi0; cutoff=cutoff, maxdim=maxdim)   # |phi(0)> = O(x0) |psi0>
+        phi = apply_local_operator(psi0, opname, x0)          # |phi(0)> = O(x0)|psi0>
+        truncate!(phi; cutoff=cutoff, maxdim=maxdim)
     end
 
-    gates = make_tebd_gates(sites, t, U, Vpp, Vpm, dt_actual)
+    advance! = stepper(phi, H; sites=sites, t=t, U=U, Vpp=Vpp, Vpm=Vpm, dt=dt_actual,
+                       cutoff=cutoff, maxdim=maxdim, normalize=normalize_state)
 
     for step in (start_step + 1):nsteps
-        phi = apply(gates, phi; cutoff=cutoff, maxdim=maxdim)
-        normalize_state && normalize!(phi)
+        phi = advance!(phi)
 
         if checkpoint_path !== nothing && (step % checkpoint_every == 0 || step == nsteps)
             save_checkpoint(checkpoint_path, phi, step, step * dt_actual, E0)
@@ -250,10 +291,11 @@ function dynamical_correlation_tebd(
         end
 
         if verbose
-            rss_gb = round(Sys.maxrss() / 2^30, digits=2)
+            rss_gb  = round(current_rss() / 2^30, digits=2)
+            live_gb = round(Base.gc_live_bytes() / 2^30, digits=2)
             println("  step $step/$nsteps  (t=$(round(step*dt_actual, digits=4)))  ",
                     "maxlinkdim(phi) = $(maxlinkdim(phi))  norm(phi) = $(round(norm(phi), digits=6))  ",
-                    "peak RSS = $(rss_gb) GB")
+                    "RSS = $(rss_gb) GB  julia live = $(live_gb) GB")
             flush(stdout)   # cluster logs are only useful live if they're not stuck in a buffer
         end
     end
